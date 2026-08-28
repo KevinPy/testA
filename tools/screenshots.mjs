@@ -171,6 +171,22 @@ await withApp({ width: 1194, height: 834, dsr: 2, locale: 'en-US' }, async (page
   await shot(page, '15-modale-rvb-anglais.png');
 });
 
+// ═══════════════════════════ CAPTURE ═══════════════════════════════════════
+// Le dessin seul, tel qu'il sera enregistré — sans les barres d'outils.
+await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
+  await tap(page, 157, 320);                      // « Le chat câlin »
+  await page.waitForTimeout(1300);
+  await tap(page, T.tool.x, T.tool.pot);
+  for (const [color, pt] of [[3, P(330, 650)], [3, P(500, 300)], [15, P(310, 165)],
+                             [7, P(415, 355)], [7, P(585, 355)], [19, P(450, 480)]]) {
+    await tap(page, T.swatch(color).x, T.swatch(color).y);
+    await tap(page, pt.x, pt.y);
+  }
+  await tap(page, 1150, T.top.y);                 // bouton capture
+  await page.waitForTimeout(2500);
+  await shot(page, '19-capture.png');
+});
+
 // ═══════════════════════════ ATELIER ═══════════════════════════════════════
 // Un dessin fait à la main, puis le coloriage qui en est déduit.
 const AT = (x, y) => ({ x: 313 + x * 0.568, y: 76 + y * 0.568 });

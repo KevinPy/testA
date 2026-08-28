@@ -194,6 +194,20 @@ class AppStrings {
   String get delete => _t(fr: 'Supprimer', en: 'Delete');
   String get keep => _t(fr: 'Non, je le garde', en: 'No, keep it');
 
+  // ── Capture ───────────────────────────────────────────────────────────────
+  String get capture => _t(fr: 'Garder mon dessin', en: 'Keep my drawing');
+  String get captureTitle => _t(fr: 'Mon dessin', en: 'My drawing');
+  String get captureSave => _t(fr: 'Enregistrer l\'image', en: 'Save the picture');
+  String get captureWorking =>
+      _t(fr: 'Je prépare l\'image…', en: 'Getting the picture ready…');
+  String get captureDone => _t(fr: 'Image enregistrée !', en: 'Picture saved!');
+  String get captureFailed => _t(
+        fr: 'L\'image n\'a pas pu être enregistrée.',
+        en: 'The picture could not be saved.',
+      );
+  String captureSize(int px) =>
+      _t(fr: '$px × $px points', en: '$px × $px pixels');
+
   // ── Réglages ──────────────────────────────────────────────────────────────
   String get settings => _t(fr: 'Réglages', en: 'Settings');
   String get language => _t(fr: 'Langue', en: 'Language');

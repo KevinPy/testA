@@ -94,7 +94,7 @@ Deux limites, assumées :
 |---|---|
 | Langage / SDK | Dart, Flutter 3.47 (canal stable) |
 | Cibles | iOS 15+ (iPhone 6s et iPad de 2017 et plus récents), Android 8.0+ / API 26 |
-| Dépendances externes | `path_drawing` (lecture des chemins vectoriels), `shared_preferences` (stockage local). **C'est tout** — `flutter_localizations` fait partie du SDK. |
+| Dépendances externes | `path_drawing` (chemins vectoriels), `shared_preferences` (stockage local), `share_plus` + `path_provider` (enregistrer une image sur téléphone), `web` (téléchargement sur navigateur). `flutter_localizations` fait partie du SDK. |
 | Police | Nunito, embarquée dans l'application (licence SIL OFL) — aucun appel réseau |
 | Rendu | Impeller (défaut iOS et Android) |
 
@@ -281,16 +281,37 @@ un enfant ne le chercherait jamais, et fermer l'application ne doit rien coûter
 Le stockage est local (`shared_preferences`), au format JSON compact décrit en
 § 6.3. Un coloriage complexe pèse quelques dizaines de kilo-octets.
 
-### 5.8 Export et partage — v1.1
+### 5.8 Garder son dessin — **livré**
 
-Bouton `Partager` derrière le **contrôle parental** (§ 10.2) :
+Un bouton 📷 dans la barre supérieure ouvre le **mode capture** : le dessin
+seul, en grand, tel qu'il sera enregistré.
 
-* PNG 2048 × 2048 sur fond blanc, via la feuille de partage du système ;
-* enregistrement dans la photothèque ;
-* impression (AirPrint / Android Print), en A4 centré.
+**Ce n'est volontairement pas une capture d'écran.** Une vraie capture
+embarquerait les barres d'outils, à la résolution de l'écran. L'image est
+rendue depuis la liste des opérations, donc à la résolution qu'on veut :
+**2048 × 2048**, de quoi imprimer en A4 à 180 points par pouce. Une marge
+blanche entoure le dessin — sans elle, un trait qui touche le bord se
+retrouverait coupé net contre le cadre.
 
-La fonction de rendu est déjà écrite et testée (`renderArtwork`) ; il reste à
-brancher l'interface.
+L'aperçu affiche **l'image réellement encodée**, pas un second rendu à
+l'écran : ce que l'enfant voit est exactement le fichier qu'il obtiendra.
+
+| | Où va l'image | Pourquoi |
+|---|---|---|
+| **Web** | Téléchargement du navigateur | Le geste que le navigateur connaît |
+| **iOS / Android** | Feuille de partage du système, qui propose « Enregistrer l'image » | Évite de réclamer la permission « Photos », qu'une application de coloriage n'a aucune autre raison de demander — et qu'Apple scrute dans la catégorie Enfants |
+
+Le nom du fichier est tiré du titre : `barbouille-le-chat-calin.png`. Un parent
+qui trie sa galerie doit reconnaître le fichier sans l'ouvrir.
+
+**Décision : regarder est libre, enregistrer passe par le contrôle parental.**
+L'écran de capture est la récompense — voir son œuvre encadrée — et reste
+accessible à l'enfant. Seul l'enregistrement fait sortir un fichier de
+l'application, et suit donc la règle posée en § 10.2. Le bouton reste éteint
+sur une page vierge : il n'y a rien à garder.
+
+L'impression (AirPrint / Android Print) reste à faire ; elle repartira du même
+PNG.
 
 ### 5.9 Langue
 
@@ -642,6 +663,7 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 - [x] 24 couleurs + modale RVB + palette personnelle persistante
 - [x] Annuler / refaire illimités, effacement annulable
 - [x] Sauvegarde automatique, reprise à l'identique
+- [x] **Mode capture** : export PNG 2048², téléchargement sur web, feuille de partage sur mobile
 - [x] Dispositions téléphone et tablette, toutes orientations
 - [x] Libellés d'accessibilité
 - [x] **Français et anglais**, interface et titres des dessins, réglable ou automatique
@@ -653,7 +675,7 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 | # | Chantier | Charge |
 |---|---|---|
 | 1 | 46 dessins supplémentaires + convertisseur SVG → `pages.g.dart` | 12 j |
-| 2 | Export PNG, partage, impression | 3 j |
+| 2 | ~~Export PNG~~ — **livré**. Reste l'impression et le partage | 1 j |
 | 3 | ~~Contrôle parental~~ — **livré** | — |
 | 4 | Sons | 3 j |
 | 5 | Achat intégré + restauration | 4 j |

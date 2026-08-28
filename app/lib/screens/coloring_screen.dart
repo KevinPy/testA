@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import '../widgets/color_tray.dart';
 import '../widgets/coloring_canvas.dart';
 import '../widgets/tool_rail.dart';
+import 'capture_screen.dart';
 
 /// L'écran de coloriage.
 ///
@@ -69,6 +70,7 @@ class _ColoringScreenState extends State<ColoringScreen> {
                     controller: _controller,
                     title: widget.page.title.resolve(AppStrings.of(context).locale),
                     onClear: _confirmClear,
+                    onCapture: _openCapture,
                     compact: false,
                   ),
                   Expanded(
@@ -100,6 +102,7 @@ class _ColoringScreenState extends State<ColoringScreen> {
                   controller: _controller,
                   title: widget.page.title.resolve(AppStrings.of(context).locale),
                   onClear: _confirmClear,
+                  onCapture: _openCapture,
                   compact: true,
                 ),
                 Expanded(
@@ -142,6 +145,18 @@ class _ColoringScreenState extends State<ColoringScreen> {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  void _openCapture() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => CaptureScreen(
+          page: _controller.page,
+          ops: _controller.ops,
+          title: widget.page.title.resolve(AppStrings.of(context).locale),
         ),
       ),
     );
@@ -203,12 +218,14 @@ class _TopBar extends StatelessWidget {
     required this.controller,
     required this.title,
     required this.onClear,
+    required this.onCapture,
     required this.compact,
   });
 
   final ArtworkController controller;
   final String title;
   final VoidCallback onClear;
+  final VoidCallback onCapture;
 
   /// Sur téléphone, le titre s'efface et la bascule passe en icône seule :
   /// l'enfant vient de choisir son dessin, il sait lequel c'est.
@@ -273,6 +290,16 @@ class _TopBar extends StatelessWidget {
                 enabled: !controller.isBlank,
                 compact: compact,
                 onTap: onClear,
+              ),
+              const SizedBox(width: 8),
+              // Garder son dessin n'a de sens qu'une fois quelque chose posé
+              // dessus : le bouton reste éteint sur une page vierge.
+              _RoundButton(
+                icon: Icons.photo_camera_rounded,
+                label: s.capture,
+                enabled: !controller.isBlank,
+                compact: compact,
+                onTap: onCapture,
               ),
             ],
           ),

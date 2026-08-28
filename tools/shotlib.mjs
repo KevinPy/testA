@@ -37,14 +37,16 @@ async function mirrorGoogleFonts(page) {
 /// `locale` pilote la langue de l'appareil simulé. Sans elle, Chromium annonce
 /// `en-US` et l'application — qui suit l'appareil par défaut — basculerait en
 /// anglais dans toutes les captures.
-export async function withApp({ width, height, dsr = 2, locale = 'fr-FR' }, fn) {
-  const browser = await chromium.launch({ executablePath: CHROME });
+export async function withApp(
+  { width, height, dsr = 2, locale = 'fr-FR', downloadsPath }, fn) {
+  const browser = await chromium.launch({ executablePath: CHROME, downloadsPath });
   const context = await browser.newContext({
     viewport: { width, height },
     deviceScaleFactor: dsr,
     hasTouch: true,
     isMobile: false,
     locale,
+    acceptDownloads: true,
   });
   const page = await context.newPage();
   await mirrorGoogleFonts(page);

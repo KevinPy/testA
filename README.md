@@ -30,6 +30,7 @@ d'un bouton.
 - **Atelier** : dessiner son propre contour, l'application en déduit les zones
   coloriables et le range dans « Mes dessins »
 - **Français et anglais** — interface et titres des dessins, automatique par défaut
+- **Garder son dessin** : export PNG 2048², sans les barres d'outils
 - Annuler / refaire illimités ; « tout effacer » annulable d'un seul appui
 - Sauvegarde automatique après chaque trait, reprise à l'identique
 - Disposition adaptée au téléphone et à la tablette, dans toutes les orientations
@@ -55,7 +56,7 @@ puis les traductions — que l'analyseur signale une par une.
 cd app
 flutter pub get
 flutter run            # appareil ou simulateur
-flutter test           # 40 tests
+flutter test           # 46 tests
 ```
 
 ## Essayer tout de suite
@@ -79,6 +80,7 @@ qui compare aussi ce que la version web sait faire et ne sait pas faire.
 ```
 app/lib/
 ├── atelier/    création de dessins : tracé, déduction des zones, stockage
+├── export/     rendu PNG du dessin et enregistrement, web et mobile
 ├── l10n/       toutes les chaînes de l'interface, en français et en anglais
 ├── models/     description d'un dessin, opérations de coloriage, outils
 ├── data/       pages.g.dart — bibliothèque générée, ne pas éditer
@@ -107,6 +109,15 @@ python3 tools/build_pages.py     # 14 dessins, 155 zones → app/lib/data/pages.
 ```
 
 ![Bibliothèque](docs/screenshots/11-bibliotheque.png)
+
+## Garder son dessin
+
+Un bouton 📷 ouvre le mode capture : le dessin seul, en 2048 × 2048, **sans
+les barres d'outils** — une vraie capture d'écran les aurait embarquées. Sur
+navigateur l'image se télécharge ; sur téléphone elle passe par la feuille de
+partage, qui propose « Enregistrer l'image ».
+
+![Mode capture](docs/screenshots/19-capture.png)
 
 ## L'Atelier
 
