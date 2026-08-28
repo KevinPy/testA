@@ -1,0 +1,18 @@
+# Flutter / Dart
+app/build/
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/ios/Pods/
+app/ios/.symlinks/
+app/android/.gradle/
+app/android/local.properties
+*.iml
+
+# Node (outils de capture)
+node_modules/
+package-lock.json
+
+# Divers
+.DS_Store
+probe.mjs
