@@ -19,6 +19,8 @@ PAGES = []
 
 
 def page(pid, title, category, emoji, regions, details=(), width=1000, height=1000):
+    """`title` est un couple (français, anglais) ; `category` un identifiant
+    dont le libellé est traduit dans AppStrings.category()."""
     PAGES.append(dict(id=pid, title=title, category=category, emoji=emoji,
                       width=width, height=height,
                       regions=[dict(id=r[0], d=r[1], hint=r[2] if len(r) > 2 else None) for r in regions],
@@ -61,7 +63,7 @@ def chat():
     d.append((line(750, 430, 910, 396),))
     d.append((line(750, 462, 904, 470),))
     d.append((line(748, 494, 896, 542),))
-    page("chat", "Le chat câlin", "Animaux", "🐱", r, d)
+    page("chat", ("Le chat câlin", "The cuddly cat"), "animaux", "🐱", r, d)
 
 
 def poisson():
@@ -80,7 +82,7 @@ def poisson():
     r.append(("oeil", circle(372, 452, 46), 0xFFFFFFFF))
     d.append((circle(378, 456, 20), 0))
     d.append((arc(300, 560, 336, 620, -0.3),))
-    page("poisson", "Le poisson rigolo", "Animaux", "🐠", r, d)
+    page("poisson", ("Le poisson rigolo", "The funny fish"), "animaux", "🐠", r, d)
 
 
 def papillon():
@@ -99,7 +101,7 @@ def papillon():
     d.append((smooth([(522, 226), (570, 130), (640, 110)], close=False),))
     d.append((circle(360, 106, 22), 0))
     d.append((circle(640, 106, 22), 0))
-    page("papillon", "Le papillon", "Animaux", "🦋", r, d)
+    page("papillon", ("Le papillon", "The butterfly"), "animaux", "🦋", r, d)
 
 
 def dinosaure():
@@ -123,7 +125,7 @@ def dinosaure():
     d.append((arc(902, 342, 946, 316, 0.22),))
     d.append((arc(392, 736, 452, 752, -0.12),))
     d.append((arc(600, 748, 660, 736, -0.12),))
-    page("dinosaure", "Le petit dino", "Animaux", "🦕", r, d)
+    page("dinosaure", ("Le petit dino", "The little dino"), "animaux", "🦕", r, d)
 
 
 def hibou():
@@ -145,7 +147,7 @@ def hibou():
     r.append(("patte_d", rrect(532, 824, 44, 40, 14), 0xFFF6A93B))
     d.append((circle(408, 404, 26), 0))
     d.append((circle(592, 404, 26), 0))
-    page("hibou", "Le hibou de nuit", "Animaux", "🦉", r, d)
+    page("hibou", ("Le hibou de nuit", "The night owl"), "animaux", "🦉", r, d)
 
 
 # ────────────────────────────── VÉHICULES ───────────────────────────────────
@@ -164,7 +166,7 @@ def voiture():
     r.append(("jante_d", circle(700, 740, 58), 0xFFE0E0E0))
     d.append((line(500, 424, 500, 552),))
     d.append((line(140, 668, 880, 668),))
-    page("voiture", "La voiture rapide", "Véhicules", "🚗", r, d)
+    page("voiture", ("La voiture rapide", "The speedy car"), "vehicules", "🚗", r, d)
 
 
 def fusee():
@@ -182,7 +184,7 @@ def fusee():
     r.append(("etoile1", star(160, 200, 52, 22), 0xFFFFD166))
     r.append(("etoile2", star(850, 300, 40, 17), 0xFFFFD166))
     r.append(("etoile3", star(800, 120, 30, 13), 0xFFFFD166))
-    page("fusee", "La fusée de l'espace", "Véhicules", "🚀", r, d)
+    page("fusee", ("La fusée de l'espace", "The space rocket"), "vehicules", "🚀", r, d)
 
 
 def bateau():
@@ -198,7 +200,7 @@ def bateau():
                                 (960, 820), (960, 960), (60, 960)]), 0xFF56B4E9))
     r.append(("vague2", smooth([(60, 910), (250, 878), (450, 912), (650, 878), (860, 912),
                                 (960, 890), (960, 980), (60, 980)]), 0xFF9BD7F0))
-    page("bateau", "Le bateau à voile", "Véhicules", "⛵", r, d)
+    page("bateau", ("Le bateau à voile", "The sailing boat"), "vehicules", "⛵", r, d)
 
 
 def train():
@@ -219,7 +221,7 @@ def train():
     r.append(("roue3", circle(650, 790, 62), 0xFF4A4A4A))
     r.append(("roue4", circle(860, 790, 62), 0xFF4A4A4A))
     d.append((line(540, 620, 560, 620),))
-    page("train", "Le train qui siffle", "Véhicules", "🚂", r, d)
+    page("train", ("Le train qui siffle", "The whistling train"), "vehicules", "🚂", r, d)
 
 
 # ─────────────────────────────── NATURE ─────────────────────────────────────
@@ -236,7 +238,7 @@ def fleur():
     r.append(("herbe", smooth([(60, 900), (300, 870), (560, 902), (820, 868), (960, 896),
                                (960, 990), (60, 990)]), 0xFF6BC46B))
     d.append((circle(500, 380, 60), 0))
-    page("fleur", "La grande fleur", "Nature", "🌸", r, d)
+    page("fleur", ("La grande fleur", "The big flower"), "nature", "🌸", r, d)
 
 
 def arbre():
@@ -253,7 +255,7 @@ def arbre():
     r.append(("soleil", circle(140, 160, 88), 0xFFFFD166))
     d.append((arc(452, 620, 548, 640, 0.12),))
     d.append((arc(440, 740, 560, 760, 0.1),))
-    page("arbre", "Le grand arbre", "Nature", "🌳", r, d)
+    page("arbre", ("Le grand arbre", "The tall tree"), "nature", "🌳", r, d)
 
 
 def maison():
@@ -272,7 +274,7 @@ def maison():
     d.append((line(250, 610, 390, 610),))
     d.append((line(690, 540, 690, 680),))
     d.append((line(620, 610, 760, 610),))
-    page("maison", "Ma jolie maison", "Nature", "🏡", r, d)
+    page("maison", ("Ma jolie maison", "My pretty house"), "nature", "🏡", r, d)
 
 
 # ───────────────────────────── GOURMANDISES ─────────────────────────────────
@@ -292,7 +294,7 @@ def glace():
     for t in (-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0):
         d.append((line(340 + 320 * t, 520, 340 + 320 * (t + 0.9), 940), 5, "cornet"))
         d.append((line(660 - 320 * t, 520, 660 - 320 * (t + 0.9), 940), 5, "cornet"))
-    page("glace", "La glace géante", "Gourmandises", "🍦", r, d)
+    page("glace", ("La glace géante", "The giant ice cream"), "gourmandises", "🍦", r, d)
 
 
 def cupcake():
@@ -310,7 +312,7 @@ def cupcake():
     d.append((smooth([(512, 106), (550, 40), (640, 46)], close=False),))
     for x in (360, 440, 520, 600, 680):
         d.append((line(x - (x - 500) * 0.06, 545, x - (x - 500) * 0.28, 868), 6, "caissette"))
-    page("cupcake", "Le cupcake sucré", "Gourmandises", "🧁", r, d)
+    page("cupcake", ("Le cupcake sucré", "The sweet cupcake"), "gourmandises", "🧁", r, d)
 
 
 for fn in (chat, poisson, papillon, dinosaure, hibou, voiture, fusee, bateau,
@@ -328,6 +330,7 @@ out = ["// GÉNÉRÉ PAR tools/build_pages.py — NE PAS ÉDITER À LA MAIN.",
        "",
        "import 'dart:ui' show Size;",
        "",
+       "import '../l10n/app_strings.dart';",
        "import '../models/coloring_page.dart';",
        "",
        "const List<ColoringPage> kColoringPages = <ColoringPage>["]
@@ -335,7 +338,8 @@ out = ["// GÉNÉRÉ PAR tools/build_pages.py — NE PAS ÉDITER À LA MAIN.",
 for p in PAGES:
     out.append("  ColoringPage(")
     out.append(f"    id: '{p['id']}',")
-    out.append(f"    title: '{esc(p['title'])}',")
+    out.append(f"    title: L10nText(fr: '{esc(p['title'][0])}', "
+               f"en: '{esc(p['title'][1])}'),")
     out.append(f"    category: '{esc(p['category'])}',")
     out.append(f"    emoji: '{p['emoji']}',")
     out.append(f"    size: Size({p['width']}, {p['height']}),")

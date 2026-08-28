@@ -5,13 +5,6 @@ import 'package:flutter/material.dart';
 enum ToolKind { crayon, feutre, pot, gomme }
 
 extension ToolKindX on ToolKind {
-  String get label => switch (this) {
-        ToolKind.crayon => 'Crayon',
-        ToolKind.feutre => 'Feutre',
-        ToolKind.pot => 'Pot de peinture',
-        ToolKind.gomme => 'Gomme',
-      };
-
   IconData get icon => switch (this) {
         ToolKind.crayon => Icons.create_rounded,
         ToolKind.feutre => Icons.brush_rounded,
@@ -35,12 +28,6 @@ extension BrushSizeX on BrushSize {
         BrushSize.petit => 18,
         BrushSize.moyen => 46,
         BrushSize.grand => 96,
-      };
-
-  String get label => switch (this) {
-        BrushSize.petit => 'Petit',
-        BrushSize.moyen => 'Moyen',
-        BrushSize.grand => 'Grand',
       };
 
   /// Diamètre de l'aperçu dans la barre d'outils.

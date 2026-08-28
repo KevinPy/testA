@@ -1,63 +1,64 @@
 import 'package:flutter/material.dart';
 
 import '../data/pages.g.dart';
+import '../l10n/app_strings.dart';
 import '../models/coloring_page.dart';
 import '../models/paint_op.dart';
 import '../state/artwork_controller.dart';
 import '../state/palette_store.dart';
+import '../state/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/artwork_painter.dart';
 import 'coloring_screen.dart';
+import 'settings_sheet.dart';
 
 /// La galerie : première chose que voit l'enfant. Grandes vignettes, filtres
 /// par catégorie avec émojis, aucun texte indispensable à la navigation.
 class GalleryScreen extends StatefulWidget {
-  const GalleryScreen({super.key, required this.store});
+  const GalleryScreen({super.key, required this.store, required this.settings});
 
   final PaletteStore store;
+  final SettingsStore settings;
 
   @override
   State<GalleryScreen> createState() => _GalleryScreenState();
 }
 
 class _GalleryScreenState extends State<GalleryScreen> {
-  static const String _kAll = 'Tout';
-  static const String _kMine = 'Mes coloriages';
+  /// Le filtre courant : `null` = tout, [_kMine] = les coloriages commencés,
+  /// sinon l'identifiant d'une catégorie. On stocke l'identifiant et non le
+  /// libellé, sinon changer de langue perdrait la sélection.
+  String? _filter;
 
-  String _category = _kAll;
+  static const String _kMine = '__mine__';
 
-  List<String> get _categories {
-    final List<String> cats = <String>[_kAll];
-    for (final ColoringPage p in kColoringPages) {
-      if (!cats.contains(p.category)) cats.add(p.category);
-    }
-    cats.add(_kMine);
-    return cats;
-  }
-
-  static const Map<String, String> _catEmoji = <String, String>{
-    _kAll: '🎨',
-    'Animaux': '🐾',
-    'Véhicules': '🚗',
-    'Nature': '🌳',
-    'Gourmandises': '🍰',
-    _kMine: '⭐',
+  static const Map<String, String> _emoji = <String, String>{
+    'animaux': '🐾',
+    'vehicules': '🚗',
+    'nature': '🌳',
+    'gourmandises': '🍰',
   };
 
-  List<ColoringPage> get _visible {
-    if (_category == _kAll) return kColoringPages;
-    if (_category == _kMine) {
-      return kColoringPages
-          .where((ColoringPage p) => widget.store.hasArtwork(p.id))
-          .toList();
+  List<String> get _categoryIds {
+    final List<String> ids = <String>[];
+    for (final ColoringPage p in kColoringPages) {
+      if (!ids.contains(p.category)) ids.add(p.category);
     }
-    return kColoringPages
-        .where((ColoringPage p) => p.category == _category)
-        .toList();
+    return ids;
   }
+
+  List<ColoringPage> get _visible => switch (_filter) {
+        null => kColoringPages,
+        _kMine => kColoringPages
+            .where((ColoringPage p) => widget.store.hasArtwork(p.id))
+            .toList(),
+        final String id =>
+          kColoringPages.where((ColoringPage p) => p.category == id).toList(),
+      };
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
@@ -67,67 +68,38 @@ class _GalleryScreenState extends State<GalleryScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                LayoutBuilder(
-                  builder: (BuildContext context, BoxConstraints c) {
-                    final bool compact = c.maxWidth < 560;
-                    return Padding(
-                      padding: EdgeInsets.fromLTRB(compact ? 16 : 24, 16, compact ? 16 : 24, 8),
-                      child: Row(
-                        children: <Widget>[
-                          Text('🖍️', style: TextStyle(fontSize: compact ? 30 : 40)),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  'Barbouille',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                                        fontSize: compact ? 28 : 38,
-                                        color: AppColors.primary,
-                                      ),
-                                ),
-                                Text(
-                                  'Choisis ton dessin !',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: compact ? 14 : 17,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF8A857F),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          _CreateSoonButton(compact: compact),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                _Header(settings: widget.settings),
                 SizedBox(
                   height: 68,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     children: <Widget>[
-                      for (final String c in _categories)
+                      _CategoryChip(
+                        label: s.categoryAll,
+                        emoji: '🎨',
+                        selected: _filter == null,
+                        onTap: () => setState(() => _filter = null),
+                      ),
+                      for (final String id in _categoryIds)
                         _CategoryChip(
-                          label: c,
-                          emoji: _catEmoji[c] ?? '🎨',
-                          selected: _category == c,
-                          onTap: () => setState(() => _category = c),
+                          label: s.category(id),
+                          emoji: _emoji[id] ?? '🎨',
+                          selected: _filter == id,
+                          onTap: () => setState(() => _filter = id),
                         ),
+                      _CategoryChip(
+                        label: s.categoryMine,
+                        emoji: '⭐',
+                        selected: _filter == _kMine,
+                        onTap: () => setState(() => _filter = _kMine),
+                      ),
                     ],
                   ),
                 ),
                 Expanded(
                   child: pages.isEmpty
-                      ? const _EmptyMine()
+                      ? _EmptyMine(message: s.emptyMine)
                       : LayoutBuilder(
                           builder: (BuildContext context, BoxConstraints c) {
                             // Une seule règle d'adaptation : des vignettes
@@ -165,11 +137,68 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Future<void> _open(ColoringPage page) async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (BuildContext context) =>
-            ColoringScreen(page: page, store: widget.store),
+        builder: (BuildContext context) => ColoringScreen(
+          page: page,
+          store: widget.store,
+        ),
       ),
     );
     if (mounted) setState(() {});
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.settings});
+
+  final SettingsStore settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints c) {
+        final bool compact = c.maxWidth < 620;
+        return Padding(
+          padding: EdgeInsets.fromLTRB(compact ? 16 : 24, 16, compact ? 16 : 24, 8),
+          child: Row(
+            children: <Widget>[
+              Text('🖍️', style: TextStyle(fontSize: compact ? 30 : 40)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      s.appName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                            fontSize: compact ? 28 : 38,
+                            color: AppColors.primary,
+                          ),
+                    ),
+                    Text(
+                      s.galleryTagline,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: compact ? 14 : 17,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF8A857F),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _CreateSoonButton(compact: compact),
+              const SizedBox(width: 8),
+              _SettingsButton(settings: settings),
+            ],
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -186,13 +215,15 @@ class _PageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    final String title = page.title.resolve(s.locale);
     final String? saved = store.artworkFor(page.id);
     final List<PaintOp> ops =
         saved == null ? const <PaintOp>[] : ArtworkController.decodeOps(saved);
 
     return Semantics(
       button: true,
-      label: page.title,
+      label: title,
       child: GestureDetector(
         onTap: onOpen,
         child: Container(
@@ -231,9 +262,9 @@ class _PageCard extends StatelessWidget {
                             color: AppColors.mint,
                             borderRadius: BorderRadius.circular(14),
                           ),
-                          child: const Text(
-                            '⭐ Commencé',
-                            style: TextStyle(
+                          child: Text(
+                            '⭐ ${s.badgeStarted}',
+                            style: const TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
                               color: Colors.white,
@@ -254,7 +285,7 @@ class _PageCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        page.title,
+                        title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -322,8 +353,41 @@ class _CategoryChip extends StatelessWidget {
   }
 }
 
-/// Emplacement de l'Atelier (phase 2). Présent dès la v1 pour réserver la place
-/// dans la navigation, et derrière un contrôle parental.
+/// L'espace parents. Discret, à côté de l'Atelier, et derrière la porte
+/// d'appui maintenu : c'est la règle posée pour tous les réglages.
+class _SettingsButton extends StatelessWidget {
+  const _SettingsButton({required this.settings});
+
+  final SettingsStore settings;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    return Semantics(
+      button: true,
+      label: s.settings,
+      child: Tooltip(
+        message: s.settings,
+        child: GestureDetector(
+          onTap: () => SettingsSheet.open(context, settings),
+          child: Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: kSoftShadow,
+            ),
+            child: const Icon(Icons.tune_rounded, size: 24, color: AppColors.ink),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Emplacement de l'Atelier (phase 2). Présent dès la v1 pour réserver sa place
+/// dans la navigation.
 class _CreateSoonButton extends StatelessWidget {
   const _CreateSoonButton({this.compact = false});
 
@@ -331,13 +395,14 @@ class _CreateSoonButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     return Tooltip(
-      message: 'Atelier — bientôt disponible',
+      message: s.studioSoon,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 18, vertical: 12),
+        padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 18, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: AppColors.accent, width: 3),
           boxShadow: kSoftShadow,
         ),
@@ -347,9 +412,9 @@ class _CreateSoonButton extends StatelessWidget {
             const Icon(Icons.auto_awesome_rounded, color: AppColors.accent, size: 22),
             if (!compact) ...<Widget>[
               const SizedBox(width: 8),
-              const Text(
-                'Atelier',
-                style: TextStyle(
+              Text(
+                s.studio,
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppColors.accent,
@@ -364,20 +429,22 @@ class _CreateSoonButton extends StatelessWidget {
 }
 
 class _EmptyMine extends StatelessWidget {
-  const _EmptyMine();
+  const _EmptyMine({required this.message});
+
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Text('🎨', style: TextStyle(fontSize: 64)),
-          SizedBox(height: 12),
+          const Text('🎨', style: TextStyle(fontSize: 64)),
+          const SizedBox(height: 12),
           Text(
-            'Aucun coloriage commencé.\nChoisis un dessin pour démarrer !',
+            message,
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: Color(0xFF8A857F),

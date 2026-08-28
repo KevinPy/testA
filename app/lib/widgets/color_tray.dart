@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../state/artwork_controller.dart';
 import '../state/palette_store.dart';
 import '../theme/app_theme.dart';
@@ -118,7 +119,7 @@ class _Swatch extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      label: 'Couleur',
+      label: AppStrings.of(context).colorSwatch,
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -153,9 +154,9 @@ class _AddColorButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Créer une nouvelle couleur',
+      label: AppStrings.of(context).newColorA11y,
       child: Tooltip(
-        message: 'Je crée ma couleur',
+        message: AppStrings.of(context).newColor,
         child: GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,

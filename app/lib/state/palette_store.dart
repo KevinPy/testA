@@ -16,9 +16,6 @@ class PaletteStore extends ChangeNotifier {
 
   final SharedPreferences _prefs;
 
-  static Future<PaletteStore> load() async =>
-      PaletteStore(await SharedPreferences.getInstance());
-
   List<Color> get customColors {
     final String? raw = _prefs.getString(_kCustom);
     if (raw == null) return <Color>[];

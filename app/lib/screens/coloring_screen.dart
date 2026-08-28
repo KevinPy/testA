@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/coloring_page.dart';
 import '../state/artwork_controller.dart';
 import '../state/palette_store.dart';
@@ -66,7 +67,7 @@ class _ColoringScreenState extends State<ColoringScreen> {
                 children: <Widget>[
                   _TopBar(
                     controller: _controller,
-                    title: widget.page.title,
+                    title: widget.page.title.resolve(AppStrings.of(context).locale),
                     onClear: _confirmClear,
                     compact: false,
                   ),
@@ -97,7 +98,7 @@ class _ColoringScreenState extends State<ColoringScreen> {
               children: <Widget>[
                 _TopBar(
                   controller: _controller,
-                  title: widget.page.title,
+                  title: widget.page.title.resolve(AppStrings.of(context).locale),
                   onClear: _confirmClear,
                   compact: true,
                 ),
@@ -147,28 +148,29 @@ class _ColoringScreenState extends State<ColoringScreen> {
   }
 
   Future<void> _confirmClear() async {
+    final AppStrings s = AppStrings.of(context);
     final bool? ok = await showDialog<bool>(
       context: context,
       builder: (BuildContext context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: const Text('Tout effacer ?',
-            style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text(
-          'Ton dessin redeviendra tout blanc.\nTu pourras l\'annuler avec la flèche ↩︎.',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Text(s.eraseAllTitle,
+            style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(
+          s.eraseAllBody,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Non, je continue',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            child: Text(s.eraseAllCancel,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Oui, effacer',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+            child: Text(s.eraseAllConfirm,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
           ),
         ],
       ),
@@ -217,13 +219,14 @@ class _TopBar extends StatelessWidget {
     return ListenableBuilder(
       listenable: controller,
       builder: (BuildContext context, _) {
+        final AppStrings s = AppStrings.of(context);
         return Padding(
           padding: EdgeInsets.fromLTRB(compact ? 12 : 14, 10, compact ? 12 : 14, 6),
           child: Row(
             children: <Widget>[
               _RoundButton(
                 icon: Icons.home_rounded,
-                label: 'Galerie',
+                label: s.gallery,
                 compact: compact,
                 onTap: () => Navigator.of(context).pop(),
               ),
@@ -250,7 +253,7 @@ class _TopBar extends StatelessWidget {
               SizedBox(width: compact ? 8 : 10),
               _RoundButton(
                 icon: Icons.undo_rounded,
-                label: 'Annuler',
+                label: s.undo,
                 enabled: controller.canUndo,
                 compact: compact,
                 onTap: controller.undo,
@@ -258,7 +261,7 @@ class _TopBar extends StatelessWidget {
               const SizedBox(width: 8),
               _RoundButton(
                 icon: Icons.redo_rounded,
-                label: 'Refaire',
+                label: s.redo,
                 enabled: controller.canRedo,
                 compact: compact,
                 onTap: controller.redo,
@@ -266,7 +269,7 @@ class _TopBar extends StatelessWidget {
               const SizedBox(width: 8),
               _RoundButton(
                 icon: Icons.delete_outline_rounded,
-                label: 'Tout effacer',
+                label: s.eraseAll,
                 enabled: !controller.isBlank,
                 compact: compact,
                 onTap: onClear,
@@ -292,14 +295,13 @@ class _MagicZonesToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool on = controller.magicZones;
+    final AppStrings s = AppStrings.of(context);
     return Semantics(
       button: true,
       toggled: on,
-      label: on ? 'Zones magiques activées' : 'Mode libre activé',
+      label: on ? s.magicZonesOn : s.freeModeOn,
       child: Tooltip(
-        message: on
-            ? 'Zones magiques : impossible de dépasser'
-            : 'Mode libre : je colorie partout',
+        message: on ? s.magicZonesHint : s.freeModeHint,
         child: GestureDetector(
           onTap: () => controller.setMagicZones(!on),
           child: AnimatedContainer(
@@ -327,7 +329,7 @@ class _MagicZonesToggle extends StatelessWidget {
                 if (!compact) ...<Widget>[
                   const SizedBox(width: 8),
                   Text(
-                    on ? 'Zones magiques' : 'Libre',
+                    on ? s.magicZones : s.freeMode,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w800,

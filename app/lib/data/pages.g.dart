@@ -3,13 +3,14 @@
 
 import 'dart:ui' show Size;
 
+import '../l10n/app_strings.dart';
 import '../models/coloring_page.dart';
 
 const List<ColoringPage> kColoringPages = <ColoringPage>[
   ColoringPage(
     id: 'chat',
-    title: 'Le chat câlin',
-    category: 'Animaux',
+    title: L10nText(fr: 'Le chat câlin', en: 'The cuddly cat'),
+    category: 'animaux',
     emoji: '🐱',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -43,8 +44,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'poisson',
-    title: 'Le poisson rigolo',
-    category: 'Animaux',
+    title: L10nText(fr: 'Le poisson rigolo', en: 'The funny fish'),
+    category: 'animaux',
     emoji: '🐠',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -67,8 +68,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'papillon',
-    title: 'Le papillon',
-    category: 'Animaux',
+    title: L10nText(fr: 'Le papillon', en: 'The butterfly'),
+    category: 'animaux',
     emoji: '🦋',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -92,8 +93,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'dinosaure',
-    title: 'Le petit dino',
-    category: 'Animaux',
+    title: L10nText(fr: 'Le petit dino', en: 'The little dino'),
+    category: 'animaux',
     emoji: '🦕',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -118,8 +119,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'hibou',
-    title: 'Le hibou de nuit',
-    category: 'Animaux',
+    title: L10nText(fr: 'Le hibou de nuit', en: 'The night owl'),
+    category: 'animaux',
     emoji: '🦉',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -145,8 +146,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'voiture',
-    title: 'La voiture rapide',
-    category: 'Véhicules',
+    title: L10nText(fr: 'La voiture rapide', en: 'The speedy car'),
+    category: 'vehicules',
     emoji: '🚗',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -168,8 +169,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'fusee',
-    title: 'La fusée de l\'espace',
-    category: 'Véhicules',
+    title: L10nText(fr: 'La fusée de l\'espace', en: 'The space rocket'),
+    category: 'vehicules',
     emoji: '🚀',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -189,8 +190,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'bateau',
-    title: 'Le bateau à voile',
-    category: 'Véhicules',
+    title: L10nText(fr: 'Le bateau à voile', en: 'The sailing boat'),
+    category: 'vehicules',
     emoji: '⛵',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -207,8 +208,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'train',
-    title: 'Le train qui siffle',
-    category: 'Véhicules',
+    title: L10nText(fr: 'Le train qui siffle', en: 'The whistling train'),
+    category: 'vehicules',
     emoji: '🚂',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -234,8 +235,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'fleur',
-    title: 'La grande fleur',
-    category: 'Nature',
+    title: L10nText(fr: 'La grande fleur', en: 'The big flower'),
+    category: 'nature',
     emoji: '🌸',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -257,8 +258,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'arbre',
-    title: 'Le grand arbre',
-    category: 'Nature',
+    title: L10nText(fr: 'Le grand arbre', en: 'The tall tree'),
+    category: 'nature',
     emoji: '🌳',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -280,8 +281,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'maison',
-    title: 'Ma jolie maison',
-    category: 'Nature',
+    title: L10nText(fr: 'Ma jolie maison', en: 'My pretty house'),
+    category: 'nature',
     emoji: '🏡',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -305,8 +306,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'glace',
-    title: 'La glace géante',
-    category: 'Gourmandises',
+    title: L10nText(fr: 'La glace géante', en: 'The giant ice cream'),
+    category: 'gourmandises',
     emoji: '🍦',
     size: Size(1000, 1000),
     regions: <RegionData>[
@@ -343,8 +344,8 @@ const List<ColoringPage> kColoringPages = <ColoringPage>[
   ),
   ColoringPage(
     id: 'cupcake',
-    title: 'Le cupcake sucré',
-    category: 'Gourmandises',
+    title: L10nText(fr: 'Le cupcake sucré', en: 'The sweet cupcake'),
+    category: 'gourmandises',
     emoji: '🧁',
     size: Size(1000, 1000),
     regions: <RegionData>[

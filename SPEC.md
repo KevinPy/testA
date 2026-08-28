@@ -28,6 +28,9 @@ leur justification ; le détail suit dans le corps du document.
 **Nom retenu : Barbouille.** Court, prononçable par un enfant, disponible, et il
 dit ce que fait l'application.
 
+**Langues : français et anglais**, avec un réglage dans l'espace parents
+(§ 5.9). Par défaut, l'application suit la langue de l'appareil.
+
 ---
 
 ## 2. Le produit en une phrase
@@ -91,7 +94,7 @@ Deux limites, assumées :
 |---|---|
 | Langage / SDK | Dart, Flutter 3.47 (canal stable) |
 | Cibles | iOS 15+ (iPhone 6s et iPad de 2017 et plus récents), Android 8.0+ / API 26 |
-| Dépendances externes | `path_drawing` (lecture des chemins vectoriels), `shared_preferences` (stockage local). **C'est tout.** |
+| Dépendances externes | `path_drawing` (lecture des chemins vectoriels), `shared_preferences` (stockage local). **C'est tout** — `flutter_localizations` fait partie du SDK. |
 | Police | Nunito, embarquée dans l'application (licence SIL OFL) — aucun appel réseau |
 | Rendu | Impeller (défaut iOS et Android) |
 
@@ -108,11 +111,14 @@ Lancement ─▶ GALERIE ─▶ COLORIAGE ─▶ (retour) ─▶ GALERIE
               │           ├─ modale « Je crée ma couleur » (RVB)
               │           └─ modale « Tout effacer ? »
               │
+              ├─ 🔒 ESPACE PARENTS ─▶ Langue
+              │
               └─ ATELIER (phase 2) ─▶ CRÉATION ─▶ PARTAGE
 ```
 
 Deux écrans en v1. **Aucun écran d'accueil, aucun tutoriel, aucun réglage
-obligatoire** : l'application s'ouvre sur les dessins.
+obligatoire** : l'application s'ouvre sur les dessins. L'espace parents (🔒) est
+derrière le contrôle parental et ne concerne jamais l'enfant.
 
 ---
 
@@ -286,6 +292,45 @@ Bouton `Partager` derrière le **contrôle parental** (§ 10.2) :
 La fonction de rendu est déjà écrite et testée (`renderArtwork`) ; il reste à
 brancher l'interface.
 
+### 5.9 Langue
+
+**Français et anglais, réglables — automatique par défaut.**
+
+| État | Comportement |
+|---|---|
+| **Automatique** (défaut) | Suit la langue de l'appareil. Une langue non gérée retombe sur l'**anglais**, convention internationale — le français n'est le bon défaut que sur un appareil français |
+| **Français** | Force le français, quel que soit l'appareil |
+| **English** | Force l'anglais |
+
+Le réglage vit dans l'**espace parents**, derrière le contrôle parental
+(§ 10.2), pour deux raisons : c'est la règle posée pour tous les réglages, et
+une application qui bascule en anglais parce qu'un enfant de 4 ans a tapoté un
+bouton est un appel au support.
+
+Chaque langue est écrite **dans sa propre langue** — « Français », « English » —
+et non traduite. C'est ainsi qu'on la reconnaît quand l'application est
+affichée dans une langue qu'on ne lit pas.
+
+**Ce qui est traduit.** L'interface, mais aussi les **titres des dessins** et
+les **noms de catégories** : « Le chat câlin » devient « The cuddly cat »,
+« Gourmandises » devient « Treats ». Une bibliothèque restée française dans une
+application anglaise n'aurait été qu'à moitié traduite. Les titres sont donc
+stockés dans les deux langues dans les données générées, et les catégories sont
+désormais des **identifiants** (`animaux`, `vehicules`…) dont le libellé est
+résolu à l'affichage.
+
+Les trois délégués `flutter_localizations` du SDK sont également installés :
+ils traduisent ce que l'application ne rédige pas elle-même — intitulés
+d'accessibilité des boîtes de dialogue, indications d'appui long, sens de
+lecture.
+
+**Ajouter une langue** coûte une valeur d'énumération, un paramètre nommé
+obligatoire de plus dans la fonction de traduction, puis la traduction de
+chaque chaîne — que **l'analyseur signale une par une**. C'est délibéré : mieux
+vaut une erreur de compilation qu'une chaîne oubliée qui s'affiche en français
+dans une application allemande. Environ soixante-dix chaînes, soit une à deux
+journées par langue, titres des dessins compris.
+
 ---
 
 ## 6. Architecture
@@ -294,12 +339,16 @@ brancher l'interface.
 
 ```
 app/lib/
+├── l10n/          app_strings.dart      ← toutes les chaînes, FR et EN
 ├── models/        coloring_page.dart · paint_op.dart · tool.dart
 ├── data/          pages.g.dart          ← généré, ne pas éditer
 ├── state/         artwork_controller.dart · palette_store.dart
+│                  settings_store.dart
 ├── widgets/       artwork_painter.dart · coloring_canvas.dart
 │                  tool_rail.dart · color_tray.dart · rgb_dialog.dart
+│                  parental_gate.dart
 ├── screens/       gallery_screen.dart · coloring_screen.dart
+│                  settings_sheet.dart
 └── theme/         app_theme.dart
 tools/
 ├── shapes.py      primitives géométriques
@@ -460,9 +509,13 @@ Une porte unique, devant tout ce qui sort de l'application ou coûte de l'argent
 partage, achat, liens externes, réglages.
 
 **Mécanisme** : maintenir un bouton appuyé pendant 2 secondes tout en suivant une
-consigne écrite en toutes lettres (« maintiens le bouton du bas »). Pas de calcul
-mental : un enfant de 7 ans résout « 7 × 3 », mais aucun enfant de 4 ans ne tient
-un appui long en lisant une consigne.
+consigne écrite en toutes lettres. Pas de calcul mental : un enfant de 7 ans
+résout « 7 × 3 », mais aucun enfant de 4 ans ne tient un appui long en lisant une
+consigne. Une barre de progression remplit le bouton pendant l'appui, pour que
+le parent voie qu'il se passe quelque chose.
+
+**Déjà implémenté** — il protège le réglage de langue (§ 5.9), et c'est le
+composant que réutiliseront le partage et l'achat intégré.
 
 ### 10.3 Classification
 
@@ -554,7 +607,9 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 - [x] Sauvegarde automatique, reprise à l'identique
 - [x] Dispositions téléphone et tablette, toutes orientations
 - [x] Libellés d'accessibilité
-- [x] 13 tests automatisés (zones, détourage, historique, sérialisation, planche de contrôle des dessins)
+- [x] **Français et anglais**, interface et titres des dessins, réglable ou automatique
+- [x] **Contrôle parental** par appui maintenu, devant les réglages
+- [x] 22 tests automatisés (zones, détourage, historique, sérialisation, traductions, planche de contrôle des dessins)
 
 ### À faire pour la v1 publiable
 
@@ -562,14 +617,14 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 |---|---|---|
 | 1 | 46 dessins supplémentaires + convertisseur SVG → `pages.g.dart` | 12 j |
 | 2 | Export PNG, partage, impression | 3 j |
-| 3 | Contrôle parental | 2 j |
+| 3 | ~~Contrôle parental~~ — **livré** | — |
 | 4 | Sons | 3 j |
 | 5 | Achat intégré + restauration | 4 j |
 | 6 | Icône, écran de lancement, fiches des magasins | 3 j |
 | 7 | Cache de rendu au-delà de 1 500 traits + mesures sur appareil ancien | 3 j |
 | 8 | Tests sur appareils réels (4 iOS, 4 Android) | 4 j |
 | 9 | Soumission, allers-retours de validation | 3 j |
-| | **Total v1** | **≈ 37 jours · homme** |
+| | **Total v1** | **≈ 35 jours · homme** |
 | | **Phase 2 — Atelier** | **≈ 25 jours · homme** |
 
 ### Lancer le projet
@@ -604,6 +659,6 @@ pour ne pas vous bloquer ; chacune se change en une journée.
 1. **Le nom.** « Barbouille » est mon choix. À vérifier auprès de l'INPI et sur
    les deux magasins.
 2. **Le prix.** 4,99 € en achat unique. La fourchette du marché est 3,99–7,99 €.
-3. **La langue.** Français seul en v1. L'anglais, l'espagnol et l'allemand
-   représentent environ 2 jours de travail — l'application ne contient qu'une
-   trentaine de chaînes, et rien dans le parcours de l'enfant n'exige la lecture.
+3. **Les langues suivantes.** Le français et l'anglais sont livrés (§ 5.9).
+   L'espagnol et l'allemand coûteraient une à deux journées chacun, titres des
+   dessins compris. À arbitrer selon les marchés visés.

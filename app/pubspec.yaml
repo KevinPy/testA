@@ -36,6 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   path_drawing: ^1.0.1
   shared_preferences: ^2.5.5
+  flutter_localizations:
+    sdk: flutter
 
 dev_dependencies:
   flutter_test:

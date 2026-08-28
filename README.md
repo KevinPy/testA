@@ -27,6 +27,7 @@ d'un bouton.
 - Galerie de **14 dessins** vectoriels classés par thème, avec reprise en cours
 - **Crayon** (grain de cire), **feutre**, **pot de peinture**, **gomme** × 3 tailles
 - **24 couleurs** + création de couleurs en **RVB**, mémorisées
+- **Français et anglais** — interface et titres des dessins, automatique par défaut
 - Annuler / refaire illimités ; « tout effacer » annulable d'un seul appui
 - Sauvegarde automatique après chaque trait, reprise à l'identique
 - Disposition adaptée au téléphone et à la tablette, dans toutes les orientations
@@ -34,24 +35,38 @@ d'un bouton.
 
 ![Coloriage en cours](docs/screenshots/03-coloriage-en-cours.png)
 
+## Langue
+
+Français et anglais. Par défaut l'application **suit la langue de l'appareil**&nbsp;;
+le réglage vit dans l'espace parents, derrière un appui maintenu de 2 secondes.
+
+Les **titres des dessins et les noms de catégories sont traduits** eux aussi —
+« Le chat câlin » devient « The cuddly cat ». Ajouter une langue&nbsp;: une valeur
+dans `AppLocale`, un paramètre nommé obligatoire de plus dans `AppStrings._t`,
+puis les traductions — que l'analyseur signale une par une.
+
+![Réglage de la langue](docs/screenshots/13-reglages-langue.png)
+
 ## Démarrer
 
 ```bash
 cd app
 flutter pub get
 flutter run            # appareil ou simulateur
-flutter test           # 13 tests
+flutter test           # 22 tests
 ```
 
 ## Organisation du dépôt
 
 ```
 app/lib/
+├── l10n/       toutes les chaînes de l'interface, en français et en anglais
 ├── models/     description d'un dessin, opérations de coloriage, outils
 ├── data/       pages.g.dart — bibliothèque générée, ne pas éditer
-├── state/      contrôleur d'œuvre, palette et sauvegarde
-├── widgets/    peintre du canevas, barre d'outils, nuancier, modale RVB
-├── screens/    galerie, coloriage
+├── state/      contrôleur d'œuvre, palette, sauvegarde, réglages
+├── widgets/    peintre du canevas, barre d'outils, nuancier, modale RVB,
+│               contrôle parental
+├── screens/    galerie, coloriage, réglages
 └── theme/      couleurs et typographie
 tools/
 ├── shapes.py         primitives géométriques

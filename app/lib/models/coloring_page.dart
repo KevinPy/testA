@@ -2,6 +2,8 @@ import 'dart:ui';
 
 import 'package:path_drawing/path_drawing.dart';
 
+import '../l10n/app_strings.dart';
+
 /// Une zone coloriable du dessin.
 ///
 /// Les dessins de la bibliothèque sont vectoriels : la zone EST un [Path]. Le
@@ -45,8 +47,15 @@ class ColoringPage {
   });
 
   final String id;
-  final String title;
+
+  /// Le titre dans chaque langue. Traduire l'interface sans traduire « Le chat
+  /// câlin » n'aurait produit qu'une application à moitié anglaise.
+  final L10nText title;
+
+  /// Identifiant de catégorie (`animaux`, `vehicules`…). Le libellé affiché
+  /// vient de [AppStrings.category].
   final String category;
+
   final String emoji;
   final Size size;
   final List<RegionData> regions;

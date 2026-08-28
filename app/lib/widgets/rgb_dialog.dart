@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../theme/app_theme.dart';
 
 /// Modale « Je crée ma couleur ».
@@ -41,6 +42,7 @@ class _RgbColorDialogState extends State<RgbColorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
     return Dialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
@@ -56,10 +58,10 @@ class _RgbColorDialogState extends State<RgbColorDialog> {
               children: <Widget>[
                 Row(
                   children: <Widget>[
-                    const Expanded(
+                    Expanded(
                       child: Text(
-                        'Je crée ma couleur',
-                        style: TextStyle(
+                        s.newColor,
+                        style: const TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w800,
                           color: AppColors.ink,
@@ -70,7 +72,7 @@ class _RgbColorDialogState extends State<RgbColorDialog> {
                       iconSize: 32,
                       onPressed: () => Navigator.of(context).pop(),
                       icon: const Icon(Icons.close_rounded),
-                      tooltip: 'Fermer',
+                      tooltip: s.close,
                     ),
                   ],
                 ),
@@ -101,7 +103,7 @@ class _RgbColorDialogState extends State<RgbColorDialog> {
                 ),
                 const SizedBox(height: 18),
                 _ChannelSlider(
-                  label: 'Rouge',
+                  label: s.channelRed,
                   emoji: '🔴',
                   value: _r,
                   gradient: <Color>[
@@ -111,7 +113,7 @@ class _RgbColorDialogState extends State<RgbColorDialog> {
                   onChanged: (double v) => setState(() => _r = v),
                 ),
                 _ChannelSlider(
-                  label: 'Vert',
+                  label: s.channelGreen,
                   emoji: '🟢',
                   value: _g,
                   gradient: <Color>[
@@ -121,7 +123,7 @@ class _RgbColorDialogState extends State<RgbColorDialog> {
                   onChanged: (double v) => setState(() => _g = v),
                 ),
                 _ChannelSlider(
-                  label: 'Bleu',
+                  label: s.channelBlue,
                   emoji: '🔵',
                   value: _b,
                   gradient: <Color>[
@@ -142,9 +144,10 @@ class _RgbColorDialogState extends State<RgbColorDialog> {
                     ),
                     onPressed: () => Navigator.of(context).pop(_color),
                     icon: const Icon(Icons.check_rounded, size: 30),
-                    label: const Text(
-                      'Ajouter à ma palette',
-                      style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+                    label: Text(
+                      s.addToPalette,
+                      style: const TextStyle(
+                          fontSize: 19, fontWeight: FontWeight.w800),
                     ),
                   ),
                 ),

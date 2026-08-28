@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_strings.dart';
 import '../models/tool.dart';
 import '../state/artwork_controller.dart';
 import '../theme/app_theme.dart';
@@ -92,9 +93,9 @@ class _ToolButton extends StatelessWidget {
       child: Semantics(
         button: true,
         selected: selected,
-        label: tool.label,
+        label: AppStrings.of(context).tool(tool),
         child: Tooltip(
-          message: tool.label,
+          message: AppStrings.of(context).tool(tool),
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(22),
@@ -180,7 +181,7 @@ class _SizeButton extends StatelessWidget {
       child: Semantics(
         button: true,
         selected: selected,
-        label: 'Taille ${size.label}',
+        label: AppStrings.of(context).sizeLabel(size),
         child: Opacity(
           opacity: enabled ? 1 : 0.35,
           child: InkWell(

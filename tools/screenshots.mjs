@@ -146,4 +146,29 @@ await withApp({ width: 390, height: 844, dsr: 3 }, async (page) => {
   await shot(page, '09-coloriage-telephone.png');
 });
 
+// ═══════════════════════════ RÉGLAGES ══════════════════════════════════════
+// L'espace parents, derrière l'appui maintenu, et la même galerie en anglais.
+await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
+  await tap(page, 1148, 44);                      // bouton réglages
+  await page.waitForTimeout(900);
+  await shot(page, '12-controle-parental.png');
+
+  await page.mouse.move(652, 471);                // appui maintenu 2 s
+  await page.mouse.down();
+  await page.waitForTimeout(2400);
+  await page.mouse.up();
+  await page.waitForTimeout(900);
+  await shot(page, '13-reglages-langue.png');
+});
+
+// Appareil réglé en anglais : l'application suit, titres des dessins compris.
+await withApp({ width: 1194, height: 834, dsr: 2, locale: 'en-US' }, async (page) => {
+  await shot(page, '14-galerie-anglais.png');
+  await tap(page, 157, 320);                      // « The cuddly cat »
+  await page.waitForTimeout(1300);
+  await tap(page, T.addColor.x, T.addColor.y);    // modale RVB en anglais
+  await page.waitForTimeout(900);
+  await shot(page, '15-modale-rvb-anglais.png');
+});
+
 console.log('\nCaptures écrites dans docs/screenshots/');
