@@ -60,7 +60,26 @@ Le workflow se déclenche à chaque poussée sur la branche, et peut aussi être
 lancé à la main : **Actions ▸ « iOS — .ipa non signé » ▸ Run workflow**.
 
 Une fois le travail terminé, l'archive `Barbouille-ipa-non-signe` se télécharge
-en bas de la page du run.
+en bas de la page du run. La dernière construction réussie :
+
+**<https://github.com/KevinPy/testA/actions/runs/33173655055>**
+
+Le fichier arrive dans un `.zip` (GitHub emballe toujours ses artefacts) :
+décompressez-le pour obtenir `Barbouille-unsigned.ipa`.
+
+Chaque construction vérifie le binaire qu'elle produit, et échoue plutôt que
+de livrer une archive que l'iPhone refuserait :
+
+| Contrôle | Relevé sur la dernière construction |
+|---|---|
+| Architecture | `Mach-O 64-bit executable arm64` |
+| Plateforme | `platform IOS` · `minos 15.0` · `sdk 18.5` |
+| Identifiant | `com.barbouille.barbouille` |
+| Nom affiché | Barbouille |
+| Familles d'appareils | iPhone **et** iPad |
+| Icône et polices | présentes dans le bundle |
+| Signature | aucune — à faire à l'installation |
+| Taille | 7,1 Mo |
 
 ### 2. Le signer avec votre identifiant Apple
 
