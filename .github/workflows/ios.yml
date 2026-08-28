@@ -91,6 +91,59 @@ jobs:
           (cd /tmp && zip -qry Barbouille-unsigned.ipa Payload)
           ls -lh /tmp/Barbouille-unsigned.ipa
 
+      # Un artefact vert ne prouve pas qu'il est installable : on interroge le
+      # binaire lui-même. Chaque vérification qui échoue fait échouer le run,
+      # plutôt que de livrer un .ipa que l'iPhone refusera en silence.
+      - name: Vérifier le binaire
+        run: |
+          set -euo pipefail
+          APP=/tmp/Payload/Runner.app
+          BIN=$APP/Runner
+          PLIST=$APP/Info.plist
+          fail() { echo "::error::$1"; exit 1; }
+
+          echo "── Architecture ──"
+          file "$BIN"
+          file "$BIN" | grep -q 'arm64' || fail "binaire non arm64 : inutilisable sur iPhone"
+          file "$BIN" | grep -q 'Mach-O' || fail "ce n'est pas un exécutable Mach-O"
+
+          echo "── Plateforme et version minimale ──"
+          vtool -show-build "$BIN" | tee /tmp/vtool.txt
+          grep -q 'platform IOS' /tmp/vtool.txt || fail "compilé pour une autre plateforme qu'iOS"
+
+          echo "── Identité de l'application ──"
+          BUNDLE=$(plutil -extract CFBundleIdentifier raw "$PLIST")
+          NAME=$(plutil -extract CFBundleDisplayName raw "$PLIST")
+          MINOS=$(plutil -extract MinimumOSVersion raw "$PLIST")
+          FAMILY=$(plutil -extract UIDeviceFamily json "$PLIST")
+          echo "  identifiant     : $BUNDLE"
+          echo "  nom affiché     : $NAME"
+          echo "  iOS minimal     : $MINOS"
+          echo "  familles        : $FAMILY  (1 = iPhone, 2 = iPad)"
+          [ "$BUNDLE" = "com.barbouille.barbouille" ] || fail "identifiant inattendu : $BUNDLE"
+          [ "$NAME" = "Barbouille" ] || fail "nom affiché inattendu : $NAME"
+
+          echo "── Ressources ──"
+          test -f "$APP/Assets.car" || fail "Assets.car absent : l'icône ne s'afficherait pas"
+          test -d "$APP/Frameworks/Flutter.framework" || fail "Flutter.framework absent"
+          test -f "$APP/Frameworks/App.framework/App" || fail "code Dart absent"
+          # Les polices et la bibliothèque de dessins voyagent dans le bundle
+          # Flutter : sans elles l'application démarre sur un écran vide.
+          test -f "$APP/Frameworks/App.framework/flutter_assets/AssetManifest.bin" \
+            || fail "assets Flutter absents"
+          ls "$APP/Frameworks/App.framework/flutter_assets/assets/fonts/" \
+            | grep -q Nunito || fail "police Nunito absente du bundle"
+
+          echo "── Signature ──"
+          if [ -d "$APP/_CodeSignature" ]; then fail "le .app est encore signé"; fi
+          echo "  non signé, comme attendu — la signature se fait à l'installation"
+
+          {
+            echo "APP_BUNDLE=$BUNDLE"
+            echo "APP_MINOS=$MINOS"
+            echo "APP_ARCH=$(file "$BIN" | sed 's/.*Mach-O 64-bit executable //')"
+          } >> "$GITHUB_ENV"
+
       - name: Résumé
         run: |
           {
@@ -99,6 +152,10 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| Taille | $(du -h /tmp/Barbouille-unsigned.ipa | cut -f1) |"
+            echo "| Architecture | ${APP_ARCH} |"
+            echo "| Identifiant | \`${APP_BUNDLE}\` |"
+            echo "| iOS minimal | ${APP_MINOS} |"
+            echo "| Signature | aucune — à signer à l'installation |"
             echo "| Flutter | ${FLUTTER_VERSION} |"
             echo "| Xcode | $(xcodebuild -version | head -1 | cut -d' ' -f2) |"
             echo ""
