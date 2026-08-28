@@ -115,13 +115,21 @@ jobs:
           BUNDLE=$(plutil -extract CFBundleIdentifier raw "$PLIST")
           NAME=$(plutil -extract CFBundleDisplayName raw "$PLIST")
           MINOS=$(plutil -extract MinimumOSVersion raw "$PLIST")
-          FAMILY=$(plutil -extract UIDeviceFamily json "$PLIST")
+          # `-o -` est nécessaire pour que plutil écrive le JSON sur la sortie
+          # standard ; sans lui la valeur revient vide et la vérification ne
+          # vérifie plus rien.
+          FAMILY=$(plutil -extract UIDeviceFamily json -o - "$PLIST")
           echo "  identifiant     : $BUNDLE"
           echo "  nom affiché     : $NAME"
           echo "  iOS minimal     : $MINOS"
           echo "  familles        : $FAMILY  (1 = iPhone, 2 = iPad)"
           [ "$BUNDLE" = "com.barbouille.barbouille" ] || fail "identifiant inattendu : $BUNDLE"
           [ "$NAME" = "Barbouille" ] || fail "nom affiché inattendu : $NAME"
+          # La spécification promet le téléphone ET la tablette : si la famille
+          # 2 disparaissait, l'application s'installerait en mode compatibilité
+          # sur iPad, avec le cadre noir. Autant que la construction le dise.
+          echo "$FAMILY" | grep -q 1 || fail "iPhone absent de UIDeviceFamily"
+          echo "$FAMILY" | grep -q 2 || fail "iPad absent de UIDeviceFamily"
 
           echo "── Ressources ──"
           test -f "$APP/Assets.car" || fail "Assets.car absent : l'icône ne s'afficherait pas"
