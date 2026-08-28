@@ -542,33 +542,70 @@ Restauration d'achat obligatoire (exigence Apple) et partage familial activé.
 
 ---
 
-## 12. Phase 2 — l'Atelier
+## 12. L'Atelier — **livré**
 
-L'objectif : *« créer ses propres dessins et les partager »*. Le bouton **Atelier**
-est déjà présent dans la galerie, désactivé, pour réserver sa place.
+L'objectif : *« créer ses propres dessins et les partager »*. La création est
+en place ; le partage reste à faire (§ 12.2).
 
 ### 12.1 Créer
 
 Un mode « je dessine le contour » : feutre noir, trois épaisseurs, gomme, fond
 blanc. Puis **« Transformer en coloriage »**.
 
-**Le point technique à traiter.** Un dessin fait à la main n'est pas vectoriel :
-il faut en déduire les zones. Le traitement se fait **sur l'appareil**, à
-l'enregistrement :
+**Le point technique.** Un dessin fait à la main n'est pas vectoriel : il faut
+en déduire les zones. Le traitement se fait **sur l'appareil**, à
+l'enregistrement, en quatre temps :
 
-1. rendu du trait dans une image de travail (1024 × 1024) ;
-2. propagation par zones (*flood fill*) sur les régions blanches ;
-3. les régions de moins de 200 pixels sont fusionnées avec leur voisine — sans
-   quoi le moindre trait tremblant crée des dizaines de zones inutilisables ;
-4. production d'une carte des zones indexée, stockée avec le dessin.
+1. rendu de l'encre seule dans une image de travail de 512 × 512, fond
+   transparent — c'est l'alpha qui distingue le trait du vide ;
+2. propagation par zones (*flood fill*) sur les surfaces libres ;
+3. **dilatation des étiquettes sous le trait**, pour que deux zones voisines se
+   rejoignent au milieu de l'encre. Sans elle, colorier laisserait un liseré
+   blanc le long de chaque trait ;
+4. **fusion des miettes** — toute zone de moins de 200 pixels ramenés à
+   l'échelle rejoint sa voisine la plus partagée. Sans quoi le moindre trait
+   tremblant crée des dizaines de zones que le doigt n'atteint pas.
 
-Un dessin créé dans l'Atelier utilise donc une **carte de zones matricielle**,
-là où la bibliothèque livrée est vectorielle. Le reste de l'application est
-inchangé : `pathForRegion` devient l'unique point de variation. C'est
-précisément pour cela que cette fonction existe déjà.
+Puis les contours sont suivis **le long des arêtes entre pixels**, simplifiés
+(Ramer–Douglas–Peucker), et émis en données de chemin SVG — exactement le format
+de la bibliothèque livrée.
 
-Durée cible : moins d'une seconde sur un appareil de 2019, calcul en isolat pour
-ne pas figer l'interface.
+**Décision : l'Atelier ne produit donc PAS une carte matricielle**, contrairement
+à ce que prévoyait la version 1.0 de ce document. Les zones déduites sont
+converties en vecteur, si bien qu'une création se colorie avec le code existant,
+sans une ligne de rendu en plus : mêmes outils, mêmes zones magiques, même pot
+de peinture. Les **traits**, eux, n'ont jamais quitté le vectoriel : seules les
+ZONES passent par l'image.
+
+Deux pièges rencontrés, qui valent d'être notés parce qu'ils ne se voyaient
+qu'à l'écran :
+
+* le suivi de contour de Moore, qui saute de centre de pixel en centre de
+  pixel, revient sur son point de départ dès le deuxième pas sur une forme
+  convexe : toutes les zones rondes se réduisaient à un triangle. Longer les
+  arêtes règle le cas sans exception ;
+* les trous d'une zone sont tracés explicitement, plutôt que creusés par
+  soustraction booléenne. `Path.combine` ne rend pas le même résultat sur le
+  moteur web que sur la machine virtuelle Dart, et le fond couvrait alors tout
+  le dessin — un test unitaire au vert, un écran faux.
+
+Durée mesurée : moins d'une seconde sur un dessin ordinaire. Le web n'ayant pas
+d'isolat, un voile « Je prépare ton coloriage… » couvre le calcul.
+
+### 12.1.1 Ce que voit l'enfant
+
+Feutre noir en trois épaisseurs, gomme, annuler / refaire / tout effacer, puis
+un seul bouton : **« En faire un coloriage »**. La création s'ouvre directement
+en coloriage — c'est la récompense du travail qui vient d'être fait — et se
+range dans **✏️ Mes dessins**.
+
+Le titre est numéroté (« Mon dessin 3 ») plutôt que saisi : à 4 ans on ne tape
+pas au clavier, et l'enfant reconnaît son dessin à la vignette. Un appui
+maintenu sur une création propose de la supprimer, avec confirmation.
+
+Limite assumée : **40 créations**, stockées localement. Au-delà, le stockage
+local n'est plus le bon endroit — l'export de fichiers, prévu avec le partage,
+prendra le relais.
 
 ### 12.2 Partager
 

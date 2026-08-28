@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'atelier/creation_store.dart';
 import 'l10n/app_strings.dart';
 import 'screens/gallery_screen.dart';
 import 'state/palette_store.dart';
@@ -19,15 +20,22 @@ Future<void> main() async {
     BarbouilleApp(
       store: PaletteStore(prefs),
       settings: SettingsStore(prefs),
+      creations: CreationStore(prefs),
     ),
   );
 }
 
 class BarbouilleApp extends StatelessWidget {
-  const BarbouilleApp({super.key, required this.store, required this.settings});
+  const BarbouilleApp({
+    super.key,
+    required this.store,
+    required this.settings,
+    required this.creations,
+  });
 
   final PaletteStore store;
   final SettingsStore settings;
+  final CreationStore creations;
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +60,11 @@ class BarbouilleApp extends StatelessWidget {
           GlobalCupertinoLocalizations.delegate,
         ],
 
-        home: GalleryScreen(store: store, settings: settings),
+        home: GalleryScreen(
+          store: store,
+          settings: settings,
+          creations: creations,
+        ),
       ),
     );
   }

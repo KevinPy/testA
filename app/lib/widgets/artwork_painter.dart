@@ -194,11 +194,13 @@ class ArtworkPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round
       ..isAntiAlias = true;
 
-    for (int i = 0; i < page.regions.length; i++) {
-      canvas.save();
-      canvas.clipPath(page.inkClips[i], doAntiAlias: true);
-      canvas.drawPath(page.regions[i], ink);
-      canvas.restore();
+    if (page.source.drawRegionOutlines) {
+      for (int i = 0; i < page.regions.length; i++) {
+        canvas.save();
+        canvas.clipPath(page.inkClips[i], doAntiAlias: true);
+        canvas.drawPath(page.regions[i], ink);
+        canvas.restore();
+      }
     }
     for (final (Path p, double w, int? clip) in page.details) {
       if (clip != null) {
@@ -223,29 +225,7 @@ class ArtworkPainter extends CustomPainter {
     }
   }
 
-  /// Lisse la suite de points du doigt en courbes quadratiques passant par les
-  /// milieux de segments : c'est ce qui évite l'aspect « polygone » d'un geste
-  /// rapide sur tablette.
-  static Path _smoothPath(List<Offset> pts) {
-    final Path path = Path();
-    if (pts.isEmpty) return path;
-    if (pts.length == 1) {
-      // Un simple tap doit poser un point : segment nul + StrokeCap.round.
-      path.moveTo(pts.first.dx, pts.first.dy);
-      path.lineTo(pts.first.dx, pts.first.dy);
-      return path;
-    }
-    path.moveTo(pts.first.dx, pts.first.dy);
-    for (int i = 1; i < pts.length - 1; i++) {
-      final Offset mid = Offset(
-        (pts[i].dx + pts[i + 1].dx) / 2,
-        (pts[i].dy + pts[i + 1].dy) / 2,
-      );
-      path.quadraticBezierTo(pts[i].dx, pts[i].dy, mid.dx, mid.dy);
-    }
-    path.lineTo(pts.last.dx, pts.last.dy);
-    return path;
-  }
+  static Path _smoothPath(List<Offset> pts) => smoothPathOfPoints(pts);
 
   @override
   bool shouldRepaint(ArtworkPainter old) =>
@@ -255,6 +235,33 @@ class ArtworkPainter extends CustomPainter {
       old.live != live ||
       old.live?.points.length != live?.points.length ||
       old.showHints != showHints;
+}
+
+/// Lisse la suite de points du doigt en courbes quadratiques passant par les
+/// milieux de segments : c'est ce qui évite l'aspect « polygone » d'un geste
+/// rapide sur tablette.
+///
+/// Exposé parce que l'Atelier doit enregistrer exactement le trait que l'enfant
+/// a vu se former ; `smoothPathData` en produit la version sérialisée.
+Path smoothPathOfPoints(List<Offset> pts) {
+  final Path path = Path();
+  if (pts.isEmpty) return path;
+  if (pts.length == 1) {
+    // Un simple tap doit poser un point : segment nul + StrokeCap.round.
+    path.moveTo(pts.first.dx, pts.first.dy);
+    path.lineTo(pts.first.dx, pts.first.dy);
+    return path;
+  }
+  path.moveTo(pts.first.dx, pts.first.dy);
+  for (int i = 1; i < pts.length - 1; i++) {
+    final Offset mid = Offset(
+      (pts[i].dx + pts[i + 1].dx) / 2,
+      (pts[i].dy + pts[i + 1].dy) / 2,
+    );
+    path.quadraticBezierTo(pts[i].dx, pts[i].dy, mid.dx, mid.dy);
+  }
+  path.lineTo(pts.last.dx, pts.last.dy);
+  return path;
 }
 
 /// Rend une œuvre en image PNG — export, partage, vignette de « Mes coloriages ».

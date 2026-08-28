@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../atelier/creation_store.dart';
 import '../data/pages.g.dart';
 import '../l10n/app_strings.dart';
 import '../models/coloring_page.dart';
@@ -9,16 +10,23 @@ import '../state/palette_store.dart';
 import '../state/settings_store.dart';
 import '../theme/app_theme.dart';
 import '../widgets/artwork_painter.dart';
+import 'atelier_screen.dart';
 import 'coloring_screen.dart';
 import 'settings_sheet.dart';
 
 /// La galerie : première chose que voit l'enfant. Grandes vignettes, filtres
 /// par catégorie avec émojis, aucun texte indispensable à la navigation.
 class GalleryScreen extends StatefulWidget {
-  const GalleryScreen({super.key, required this.store, required this.settings});
+  const GalleryScreen({
+    super.key,
+    required this.store,
+    required this.settings,
+    required this.creations,
+  });
 
   final PaletteStore store;
   final SettingsStore settings;
+  final CreationStore creations;
 
   @override
   State<GalleryScreen> createState() => _GalleryScreenState();
@@ -37,23 +45,29 @@ class _GalleryScreenState extends State<GalleryScreen> {
     'vehicules': '🚗',
     'nature': '🌳',
     'gourmandises': '🍰',
+    kAtelierCategory: '✏️',
   };
+
+  /// Les créations d'abord : ce que l'enfant vient de dessiner passe avant la
+  /// bibliothèque livrée.
+  List<ColoringPage> get _allPages =>
+      <ColoringPage>[...widget.creations.pages, ...kColoringPages];
 
   List<String> get _categoryIds {
     final List<String> ids = <String>[];
-    for (final ColoringPage p in kColoringPages) {
+    for (final ColoringPage p in _allPages) {
       if (!ids.contains(p.category)) ids.add(p.category);
     }
     return ids;
   }
 
   List<ColoringPage> get _visible => switch (_filter) {
-        null => kColoringPages,
-        _kMine => kColoringPages
+        null => _allPages,
+        _kMine => _allPages
             .where((ColoringPage p) => widget.store.hasArtwork(p.id))
             .toList(),
         final String id =>
-          kColoringPages.where((ColoringPage p) => p.category == id).toList(),
+          _allPages.where((ColoringPage p) => p.category == id).toList(),
       };
 
   @override
@@ -62,13 +76,16 @@ class _GalleryScreenState extends State<GalleryScreen> {
     return Scaffold(
       body: SafeArea(
         child: ListenableBuilder(
-          listenable: widget.store,
+          listenable: Listenable.merge(<Listenable>[widget.store, widget.creations]),
           builder: (BuildContext context, _) {
             final List<ColoringPage> pages = _visible;
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                _Header(settings: widget.settings),
+                _Header(
+                  settings: widget.settings,
+                  onAtelier: _openAtelier,
+                ),
                 SizedBox(
                   height: 68,
                   child: ListView(
@@ -83,7 +100,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                       ),
                       for (final String id in _categoryIds)
                         _CategoryChip(
-                          label: s.category(id),
+                          label: id == kAtelierCategory
+                              ? s.categoryAtelier
+                              : s.category(id),
                           emoji: _emoji[id] ?? '🎨',
                           selected: _filter == id,
                           onTap: () => setState(() => _filter = id),
@@ -121,6 +140,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                 page: pages[i],
                                 store: widget.store,
                                 onOpen: () => _open(pages[i]),
+                                onDelete: pages[i].category == kAtelierCategory
+                                    ? () => _confirmDelete(pages[i])
+                                    : null,
                               ),
                             );
                           },
@@ -132,6 +154,49 @@ class _GalleryScreenState extends State<GalleryScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openAtelier() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => AtelierScreen(
+          store: widget.store,
+          creations: widget.creations,
+        ),
+      ),
+    );
+    if (mounted) setState(() => _filter = kAtelierCategory);
+  }
+
+  /// Supprimer passe par une confirmation : un dessin d'enfant ne disparaît pas
+  /// sur un appui long involontaire.
+  Future<void> _confirmDelete(ColoringPage page) async {
+    final AppStrings s = AppStrings.of(context);
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Text(s.deleteDrawingTitle,
+            style: const TextStyle(fontWeight: FontWeight.w800)),
+        content: Text(s.deleteDrawingBody,
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(s.keep,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.accent),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(s.delete,
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    if (ok ?? false) await widget.creations.delete(page.id);
   }
 
   Future<void> _open(ColoringPage page) async {
@@ -148,9 +213,10 @@ class _GalleryScreenState extends State<GalleryScreen> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.settings});
+  const _Header({required this.settings, required this.onAtelier});
 
   final SettingsStore settings;
+  final VoidCallback onAtelier;
 
   @override
   Widget build(BuildContext context) {
@@ -191,7 +257,7 @@ class _Header extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              _CreateSoonButton(compact: compact),
+              _AtelierButton(compact: compact, onTap: onAtelier),
               const SizedBox(width: 8),
               _SettingsButton(settings: settings),
             ],
@@ -207,11 +273,16 @@ class _PageCard extends StatelessWidget {
     required this.page,
     required this.store,
     required this.onOpen,
+    this.onDelete,
   });
 
   final ColoringPage page;
   final PaletteStore store;
   final VoidCallback onOpen;
+
+  /// Renseigné uniquement pour les créations : la bibliothèque livrée ne se
+  /// supprime pas.
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -226,6 +297,7 @@ class _PageCard extends StatelessWidget {
       label: title,
       child: GestureDetector(
         onTap: onOpen,
+        onLongPress: onDelete,
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -386,19 +458,21 @@ class _SettingsButton extends StatelessWidget {
   }
 }
 
-/// Emplacement de l'Atelier (phase 2). Présent dès la v1 pour réserver sa place
-/// dans la navigation.
-class _CreateSoonButton extends StatelessWidget {
-  const _CreateSoonButton({this.compact = false});
+/// L'entrée de l'Atelier.
+class _AtelierButton extends StatelessWidget {
+  const _AtelierButton({required this.onTap, this.compact = false});
 
+  final VoidCallback onTap;
   final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final AppStrings s = AppStrings.of(context);
     return Tooltip(
-      message: s.studioSoon,
-      child: Container(
+      message: s.studio,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
         padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 18, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -422,6 +496,7 @@ class _CreateSoonButton extends StatelessWidget {
               ),
             ],
           ],
+          ),
         ),
       ),
     );

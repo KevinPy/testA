@@ -171,4 +171,42 @@ await withApp({ width: 1194, height: 834, dsr: 2, locale: 'en-US' }, async (page
   await shot(page, '15-modale-rvb-anglais.png');
 });
 
+// ═══════════════════════════ ATELIER ═══════════════════════════════════════
+// Un dessin fait à la main, puis le coloriage qui en est déduit.
+const AT = (x, y) => ({ x: 313 + x * 0.568, y: 76 + y * 0.568 });
+function ring(cx, cy, r, n = 44) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    pts.push(AT(cx + Math.cos(a) * r, cy + Math.sin(a) * r));
+  }
+  return pts;
+}
+
+await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
+  await tap(page, 1047, 51);                       // Atelier
+  await page.waitForTimeout(1200);
+  await stroke(page, ring(500, 300, 190), { steps: 2 });
+  await stroke(page, ring(500, 700, 250), { steps: 2 });
+  await stroke(page, [AT(430, 260), AT(440, 300)], { steps: 6 });
+  await stroke(page, [AT(570, 260), AT(580, 300)], { steps: 6 });
+  await stroke(page, [AT(430, 360), AT(500, 400), AT(570, 360)], { steps: 8 });
+  await shot(page, '16-atelier-dessin.png');
+
+  await tap(page, 596, 788);                       // « En faire un coloriage »
+  await page.waitForTimeout(3500);
+
+  await tap(page, T.tool.x, T.tool.pot);
+  for (const [color, pt] of [[3, P(500, 300)], [10, P(500, 700)], [6, P(90, 930)]]) {
+    await tap(page, T.swatch(color).x, T.swatch(color).y);
+    await tap(page, pt.x, pt.y);
+  }
+  await page.waitForTimeout(400);
+  await shot(page, '17-atelier-coloriage.png');
+
+  await tap(page, T.top.home, T.top.y);            // retour galerie
+  await page.waitForTimeout(1000);
+  await shot(page, '18-mes-dessins.png');
+});
+
 console.log('\nCaptures écrites dans docs/screenshots/');

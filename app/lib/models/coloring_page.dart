@@ -44,6 +44,7 @@ class ColoringPage {
     required this.size,
     required this.regions,
     this.details = const <DetailData>[],
+    this.drawRegionOutlines = true,
   });
 
   final String id;
@@ -58,6 +59,13 @@ class ColoringPage {
 
   final String emoji;
   final Size size;
+
+  /// Les contours de zone servent-ils aussi d'encre ?
+  ///
+  /// Vrai pour la bibliothèque, où la zone EST le dessin. Faux pour l'Atelier,
+  /// où les zones sont déduites des pixels : y repasser à l'encre doublerait
+  /// le trait de l'enfant d'un liseré tremblant.
+  final bool drawRegionOutlines;
   final List<RegionData> regions;
   final List<DetailData> details;
 }
@@ -97,6 +105,10 @@ class CompiledPage {
   final Path background;
 
   static final Map<String, CompiledPage> _cache = <String, CompiledPage>{};
+
+  /// Oublie une page compilée : une création supprimée ou refaite ne doit pas
+  /// ressortir du cache.
+  static void evict(String id) => _cache.remove(id);
 
   static CompiledPage of(ColoringPage page) {
     return _cache.putIfAbsent(page.id, () {

@@ -27,6 +27,8 @@ d'un bouton.
 - Galerie de **14 dessins** vectoriels classés par thème, avec reprise en cours
 - **Crayon** (grain de cire), **feutre**, **pot de peinture**, **gomme** × 3 tailles
 - **24 couleurs** + création de couleurs en **RVB**, mémorisées
+- **Atelier** : dessiner son propre contour, l'application en déduit les zones
+  coloriables et le range dans « Mes dessins »
 - **Français et anglais** — interface et titres des dessins, automatique par défaut
 - Annuler / refaire illimités ; « tout effacer » annulable d'un seul appui
 - Sauvegarde automatique après chaque trait, reprise à l'identique
@@ -53,7 +55,7 @@ puis les traductions — que l'analyseur signale une par une.
 cd app
 flutter pub get
 flutter run            # appareil ou simulateur
-flutter test           # 22 tests
+flutter test           # 40 tests
 ```
 
 ## Essayer tout de suite
@@ -76,6 +78,7 @@ qui compare aussi ce que la version web sait faire et ne sait pas faire.
 
 ```
 app/lib/
+├── atelier/    création de dessins : tracé, déduction des zones, stockage
 ├── l10n/       toutes les chaînes de l'interface, en français et en anglais
 ├── models/     description d'un dessin, opérations de coloriage, outils
 ├── data/       pages.g.dart — bibliothèque générée, ne pas éditer
@@ -104,6 +107,19 @@ python3 tools/build_pages.py     # 14 dessins, 155 zones → app/lib/data/pages.
 ```
 
 ![Bibliothèque](docs/screenshots/11-bibliotheque.png)
+
+## L'Atelier
+
+L'enfant dessine un contour noir ; l'application en déduit les zones
+coloriables et lui rend un coloriage, colorié avec les mêmes outils que la
+bibliothèque livrée.
+
+![Dessin dans l'Atelier](docs/screenshots/16-atelier-dessin.png)
+![Le coloriage qui en sort](docs/screenshots/17-atelier-coloriage.png)
+
+Les zones sont déduites des pixels — propagation, dilatation sous le trait,
+fusion des miettes — puis **reconverties en vecteur**. Une création se colorie
+donc avec le code existant, sans une ligne de rendu en plus.
 
 ## Regénérer les captures d'écran
 

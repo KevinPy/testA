@@ -163,6 +163,37 @@ class AppStrings {
   String channelValue(String channel, int value) =>
       _t(fr: '$channel $value sur 255', en: '$channel $value of 255');
 
+  // ── Atelier ───────────────────────────────────────────────────────────────
+  String get atelierTitle => _t(fr: 'Mon atelier', en: 'My studio');
+  String get atelierHint => _t(
+        fr: 'Dessine ton contour au feutre noir',
+        en: 'Draw your outline with the black marker',
+      );
+  String get atelierTransform =>
+      _t(fr: 'En faire un coloriage', en: 'Turn it into a colouring page');
+  String get atelierWorking => _t(
+        fr: 'Je prépare ton coloriage…',
+        en: 'Getting your colouring page ready…',
+      );
+  String get atelierBlank => _t(
+        fr: 'Ta feuille est encore toute blanche.\nDessine quelque chose !',
+        en: 'Your sheet is still blank.\nDraw something first!',
+      );
+  String get atelierFull => _t(
+        fr: 'Tu as déjà beaucoup de dessins.\nSupprimes-en un pour en créer un nouveau.',
+        en: 'You already have a lot of drawings.\nDelete one to make room.',
+      );
+  String get atelierPen => _t(fr: 'Feutre noir', en: 'Black marker');
+  String get categoryAtelier => _t(fr: 'Mes dessins', en: 'My drawings');
+  String get deleteDrawingTitle =>
+      _t(fr: 'Supprimer ce dessin ?', en: 'Delete this drawing?');
+  String get deleteDrawingBody => _t(
+        fr: 'Il partira pour de bon, avec son coloriage.',
+        en: 'It will be gone for good, along with its colouring.',
+      );
+  String get delete => _t(fr: 'Supprimer', en: 'Delete');
+  String get keep => _t(fr: 'Non, je le garde', en: 'No, keep it');
+
   // ── Réglages ──────────────────────────────────────────────────────────────
   String get settings => _t(fr: 'Réglages', en: 'Settings');
   String get language => _t(fr: 'Langue', en: 'Language');
