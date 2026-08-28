@@ -120,12 +120,29 @@ def draw_crayon(img):
     img.alpha_composite(layer)
 
 
-def build_master():
-    img = Image.new("RGBA", (S, S), PAPER_TOP + (255,))
-    background(img)
-    draw_scribble(ImageDraw.Draw(img))
-    draw_crayon(img)
-    return img.resize((MASTER, MASTER), Image.LANCZOS).convert("RGB")
+def build_master(content_scale=1.0):
+    """Icône complète.
+
+    `content_scale` réduit le dessin sans toucher au fond : les icônes
+    « maskable » d'Android peuvent être rognées jusqu'à leur cercle intérieur,
+    et le crayon doit y survivre.
+    """
+    bg = Image.new("RGBA", (S, S), PAPER_TOP + (255,))
+    background(bg)
+
+    content = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    draw_scribble(ImageDraw.Draw(content))
+    draw_crayon(content)
+
+    if content_scale != 1.0:
+        n = int(S * content_scale)
+        content = content.resize((n, n), Image.LANCZOS)
+        placed = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+        placed.paste(content, ((S - n) // 2, (S - n) // 2), content)
+        content = placed
+
+    bg.alpha_composite(content)
+    return bg.resize((MASTER, MASTER), Image.LANCZOS).convert("RGB")
 
 
 IOS = [
@@ -142,9 +159,17 @@ IOS = [
 ANDROID = [("mdpi", 48), ("hdpi", 72), ("xhdpi", 96),
            ("xxhdpi", 144), ("xxxhdpi", 192)]
 
+# Le web sert aussi d'installation sur l'écran d'accueil d'un iPhone : les
+# icônes doivent donc être les vraies, pas celles de démonstration de Flutter.
+WEB = [("Icon-192.png", 192, False), ("Icon-512.png", 512, False),
+       ("Icon-maskable-192.png", 192, True), ("Icon-maskable-512.png", 512, True),
+       ("apple-touch-icon.png", 180, False)]
+
 
 def main():
     master = build_master()
+    # iOS applique son propre masque arrondi : le dessin va bord à bord.
+    maskable = build_master(content_scale=0.70)
     master.save(os.path.join(ROOT, "docs", "icon-1024.png"))
 
     ios_dir = os.path.join(ROOT, "app", "ios", "Runner",
@@ -160,7 +185,15 @@ def main():
         master.resize((size, size), Image.LANCZOS).save(
             os.path.join(res, f"mipmap-{folder}", "ic_launcher.png"))
 
-    print(f"icône générée : {len(IOS)} tailles iOS, {len(ANDROID)} densités Android")
+    web = os.path.join(ROOT, "app", "web")
+    for name, size, is_maskable in WEB:
+        src = maskable if is_maskable else master
+        src.resize((size, size), Image.LANCZOS).save(
+            os.path.join(web, "icons", name))
+    master.resize((32, 32), Image.LANCZOS).save(os.path.join(web, "favicon.png"))
+
+    print(f"icône générée : {len(IOS)} tailles iOS, "
+          f"{len(ANDROID)} densités Android, {len(WEB)} déclinaisons web")
 
 
 if __name__ == "__main__":

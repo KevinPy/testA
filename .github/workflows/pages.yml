@@ -1,0 +1,127 @@
+# Compile la version web et la publie sur GitHub Pages.
+#
+# L'adresse dépend du dépôt : https://<compte>.github.io/<dépôt>/
+# La page vit donc dans un sous-chemin, d'où le `--base-href` calculé plus bas.
+#
+# Sur iPhone, cette page s'ajoute à l'écran d'accueil et s'ouvre en plein
+# écran, sans barre Safari — voir docs/INSTALL-IPHONE.md.
+
+name: Web — GitHub Pages
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/kids-coloring-app-tszz3d, main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/pages.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Un seul déploiement à la fois. `cancel-in-progress: false` : on laisse un
+# déploiement en cours se terminer plutôt que de laisser le site à mi-chemin.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: '3.47.2'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Flutter ${{ env.FLUTTER_VERSION }}
+        run: |
+          set -euo pipefail
+          # L'URL est lue dans l'index officiel plutôt que reconstruite à la
+          # main : le nom des archives a déjà piégé la construction iOS.
+          INDEX=https://storage.googleapis.com/flutter_infra_release/releases/releases_linux.json
+          URL=$(curl -fsSL "$INDEX" | jq -r --arg v "$FLUTTER_VERSION" '
+              .base_url as $b
+              | .releases[]
+              | select(.channel == "stable" and .version == $v)
+              | "\($b)/\(.archive)"' | head -1)
+          test -n "$URL" || { echo "::error::Flutter $FLUTTER_VERSION introuvable"; exit 1; }
+          curl -fsSL -o /tmp/flutter.tar.xz "$URL"
+          mkdir -p "$RUNNER_TOOL_CACHE/flutter-sdk"
+          tar xf /tmp/flutter.tar.xz -C "$RUNNER_TOOL_CACHE/flutter-sdk"
+          echo "$RUNNER_TOOL_CACHE/flutter-sdk/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Dépendances
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyse et tests
+        working-directory: app
+        run: |
+          flutter analyze
+          flutter test
+
+      - name: Compiler la version web
+        working-directory: app
+        run: |
+          set -euo pipefail
+          # GitHub Pages sert le dépôt dans un sous-chemin : sans base-href,
+          # l'application chercherait ses ressources à la racine du domaine.
+          BASE="/${GITHUB_REPOSITORY#*/}/"
+          echo "base-href : $BASE"
+          # `--no-web-resources-cdn` embarque CanvasKit dans le déploiement :
+          # la page ne dépend plus d'un CDN tiers pour démarrer.
+          flutter build web --release \
+            --no-web-resources-cdn \
+            --base-href "$BASE"
+
+      - name: Alléger le déploiement
+        working-directory: app/build/web
+        run: |
+          set -euo pipefail
+          before=$(du -sh . | cut -f1)
+          # Tables de symboles de CanvasKit : utiles pour désobfusquer une pile
+          # d'appels du moteur, inutiles pour exécuter la page.
+          find canvaskit -name '*.symbols' -delete
+          # Les mentions légales des paquets Dart restent dans le dépôt ; elles
+          # n'ont pas à être servies à chaque visite.
+          echo "avant $before → après $(du -sh . | cut -f1)"
+
+      # Sans ce fichier, GitHub Pages fait passer le contenu par Jekyll, qui
+      # ignore les dossiers commençant par un souligné.
+      - name: Neutraliser Jekyll
+        run: touch app/build/web/.nojekyll
+
+      # `enablement: true` active Pages sur le dépôt si ce n'est pas déjà fait,
+      # ce qui évite un aller-retour dans les réglages.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Résumé
+        run: |
+          {
+            echo "### Barbouille — version web déployée"
+            echo ""
+            echo "**${{ steps.deployment.outputs.page_url }}**"
+            echo ""
+            echo "Sur iPhone : ouvrir l'adresse dans Safari, puis"
+            echo "**Partager ▸ Sur l'écran d'accueil** pour l'installer en plein écran."
+          } >> "$GITHUB_STEP_SUMMARY"

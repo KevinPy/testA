@@ -6,7 +6,7 @@
     "background_color": "#FFFDF7",
     "theme_color": "#5B4BD6",
     "description": "Application de coloriage pour enfants de 3 à 8 ans.",
-    "orientation": "portrait-primary",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
@@ -30,6 +30,11 @@
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
+        },
+        {
+            "src": "icons/apple-touch-icon.png",
+            "sizes": "180x180",
+            "type": "image/png"
         }
     ]
 }

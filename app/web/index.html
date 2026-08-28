@@ -20,11 +20,20 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Coloriage pour enfants — Barbouille">
 
-  <!-- iOS meta tags & icons -->
+  <!-- `viewport-fit=cover` étend la page sous l'encoche et la barre d'accueil :
+       sans lui, une application ajoutée à l'écran d'accueil garde deux bandes
+       blanches sur iPhone. Le SafeArea de Flutter protège déjà les commandes. -->
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0,
+                 user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#FFFCF6">
+
+  <!-- Ajout à l'écran d'accueil, iOS et Android -->
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="barbouille">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Barbouille">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png"/>
@@ -33,6 +42,18 @@
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <style>
+    /* Le fond de page reprend le papier de l'application : pendant le
+       chargement du moteur, l'écran ne doit pas être blanc puis crème.
+       `overscroll-behavior` supprime le rebond de Safari, qui donne
+       l'impression que le dessin glisse quand l'enfant colorie. */
+    html, body {
+      margin: 0; padding: 0; height: 100%;
+      background: #FFFCF6;
+      overscroll-behavior: none;
+    }
+    body { -webkit-tap-highlight-color: transparent; }
+  </style>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader
