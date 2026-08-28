@@ -56,6 +56,12 @@ flutter run            # appareil ou simulateur
 flutter test           # 22 tests
 ```
 
+## Essayer tout de suite
+
+**<https://kevinpy.github.io/testA/>** — déployé sur GitHub Pages à chaque
+poussée. Sur iPhone, ouvrir l'adresse dans Safari puis **Partager ▸ Sur l'écran
+d'accueil** : l'application se lance en plein écran, sans barre de navigateur.
+
 ## Installer sur un iPhone
 
 Un `.ipa` non signé est construit par GitHub Actions sur un exécuteur macOS
@@ -63,7 +69,8 @@ Un `.ipa` non signé est construit par GitHub Actions sur un exécuteur macOS
 Apple au moment de l'installation — aucun certificat ne transite par
 l'intégration continue.
 
-Marche à suivre complète, avec ou sans Mac : **[docs/INSTALL-IPHONE.md](docs/INSTALL-IPHONE.md)**.
+Marche à suivre complète, avec ou sans Mac : **[docs/INSTALL-IPHONE.md](docs/INSTALL-IPHONE.md)**,
+qui compare aussi ce que la version web sait faire et ne sait pas faire.
 
 ## Organisation du dépôt
 

@@ -1,8 +1,12 @@
 # Installer Barbouille sur un iPhone
 
-Trois chemins, du plus court au plus complet. **Le mode développeur que vous
-avez déjà activé est nécessaire dans les trois cas** : il autorise iOS à lancer
-une application qui ne vient pas de l'App Store.
+Trois chemins. **Le plus rapide est le C — la version web, déjà en ligne :**
+
+**<https://kevinpy.github.io/testA/>**
+
+Les chemins A et B installent le vrai binaire natif ; ils exigent le mode
+développeur que vous avez déjà activé, qui autorise iOS à lancer une
+application ne venant pas de l'App Store.
 
 ---
 
@@ -114,28 +118,43 @@ sont conservés.
 
 ---
 
-## C. Tout de suite, sans rien installer — la version web
+## C. La version web — rien à installer, rien à signer
 
-L'application est compilée pour le web dans la même base de code. Servie en
-HTTPS, elle s'ouvre dans Safari et s'ajoute à l'écran d'accueil
-(**Partager ▸ Sur l'écran d'accueil**), où elle se lance en plein écran, sans
-barre de navigateur.
+**<https://kevinpy.github.io/testA/>**
 
-C'est le moyen le plus rapide de la montrer à un enfant ce soir. Ses limites,
-qui sont exactement celles qui justifient le binaire natif :
+Déployée automatiquement sur GitHub Pages à chaque poussée touchant `app/`
+(workflow `.github/workflows/pages.yml`). Aucune signature, aucune expiration à
+7 jours, aucun câble.
 
-- le dessin passe par WebKit et non par Impeller — le tracé est un peu moins
-  fluide sur les gros aplats ;
-- pas de stylet Apple Pencil avec la pression ;
-- Safari peut vider le stockage local d'un site peu visité, donc les coloriages
-  en cours ne sont pas garantis dans la durée.
+### L'ajouter à l'écran d'accueil
 
-```bash
-cd app
-flutter build web --release --no-web-resources-cdn
-# puis servir build/web/ derrière du HTTPS — iOS refuse l'ajout à l'écran
-# d'accueil depuis une origine non sécurisée.
-```
+Ouvrir l'adresse **dans Safari** (pas Chrome : sur iOS, seul Safari sait
+installer une application web), puis **Partager ▸ Sur l'écran d'accueil**.
+
+Elle se lance alors en plein écran, sans barre de navigateur, avec l'icône de
+Barbouille — impossible à distinguer d'une application installée, pour un
+enfant.
+
+### Ce que la version web ne fait pas
+
+Ces limites sont exactement ce qui justifie le binaire natif :
+
+| | Web (Pages) | Natif (`.ipa`) |
+|---|---|---|
+| Installation | Immédiate, par une adresse | Sideload ou Xcode |
+| Expiration | Aucune | 7 jours (identifiant gratuit) |
+| Moteur de rendu | WebKit — tracé un peu moins fluide sur les grands aplats | Impeller, accéléré |
+| Apple Pencil | Sans pression | Pression et inclinaison |
+| Sauvegarde des coloriages | Safari peut vider le stockage d'un site peu visité | Durable |
+| Premier chargement | ~10 Mo à télécharger | Sans objet |
+
+Autrement dit : parfait pour montrer l'application et la faire essayer, pas
+pour l'usage quotidien d'un enfant.
+
+### Redéployer
+
+Le déploiement se refait tout seul à chaque poussée. Pour le forcer :
+**Actions ▸ « Web — GitHub Pages » ▸ Run workflow**.
 
 ---
 
