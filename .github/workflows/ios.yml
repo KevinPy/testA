@@ -1,0 +1,103 @@
+# Construit l'application iOS sur un exécuteur macOS et publie un .ipa NON SIGNÉ.
+#
+# Pourquoi non signé : signer exige un certificat Apple, qui est personnel. Le
+# .ipa produit ici se signe ensuite avec VOTRE identifiant Apple, au moment de
+# l'installation, par Sideloadly ou AltStore — aucun secret ne transite par CI.
+#
+# Voir docs/INSTALL-IPHONE.md pour la marche à suivre côté iPhone.
+
+name: iOS — .ipa non signé
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [claude/kids-coloring-app-tszz3d, main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ios.yml'
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: '3.47.2'
+
+jobs:
+  build:
+    # Exécuteur Apple Silicon : Xcode et CocoaPods y sont préinstallés.
+    runs-on: macos-15
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Flutter est installé depuis l'archive officielle plutôt que par une
+      # action tierce : une dépendance de moins dans la chaîne de construction.
+      - name: Installer Flutter ${{ env.FLUTTER_VERSION }}
+        run: |
+          set -euo pipefail
+          ARCH=$([ "$(uname -m)" = "arm64" ] && echo "_arm64" || echo "")
+          URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos${ARCH}-${FLUTTER_VERSION}-stable.zip"
+          echo "Téléchargement de $URL"
+          curl -fsSL -o /tmp/flutter.zip "$URL"
+          unzip -q /tmp/flutter.zip -d "$RUNNER_TOOL_CACHE"
+          echo "$RUNNER_TOOL_CACHE/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Vérifier la chaîne de construction
+        run: |
+          flutter --version
+          xcodebuild -version
+
+      - name: Dépendances
+        working-directory: app
+        run: flutter pub get
+
+      # Les tests tournent avant la compilation : un .ipa qui embarque une
+      # régression connue ne vaut pas les minutes d'exécuteur qu'il coûte.
+      - name: Analyse et tests
+        working-directory: app
+        run: |
+          flutter analyze
+          flutter test
+
+      - name: Compiler l'application iOS (sans signature)
+        working-directory: app
+        run: flutter build ios --release --no-codesign
+
+      # Un .ipa est une archive zip contenant un dossier Payload/.
+      # `flutter build ipa` exigerait une équipe de développement et des
+      # options d'export ; on assemble donc l'archive nous-mêmes.
+      - name: Assembler le .ipa
+        working-directory: app
+        run: |
+          set -euo pipefail
+          APP="build/ios/iphoneos/Runner.app"
+          test -d "$APP" || { echo "::error::$APP introuvable"; exit 1; }
+          rm -rf /tmp/Payload && mkdir -p /tmp/Payload
+          cp -R "$APP" /tmp/Payload/
+          # Un .app resté signé « ad hoc » gêne certains outils de sideload.
+          rm -rf /tmp/Payload/Runner.app/_CodeSignature
+          (cd /tmp && zip -qry Barbouille-unsigned.ipa Payload)
+          ls -lh /tmp/Barbouille-unsigned.ipa
+
+      - name: Résumé
+        run: |
+          {
+            echo "### Barbouille — .ipa non signé"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Taille | $(du -h /tmp/Barbouille-unsigned.ipa | cut -f1) |"
+            echo "| Flutter | ${FLUTTER_VERSION} |"
+            echo "| Xcode | $(xcodebuild -version | head -1 | cut -d' ' -f2) |"
+            echo ""
+            echo "Téléchargez l'artefact ci-dessous, puis suivez"
+            echo "\`docs/INSTALL-IPHONE.md\` pour l'installer sur l'iPhone."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Barbouille-ipa-non-signe
+          path: /tmp/Barbouille-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30

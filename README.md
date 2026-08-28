@@ -56,6 +56,15 @@ flutter run            # appareil ou simulateur
 flutter test           # 22 tests
 ```
 
+## Installer sur un iPhone
+
+Un `.ipa` non signé est construit par GitHub Actions sur un exécuteur macOS
+(**Actions ▸ « iOS — .ipa non signé »**), puis signé avec votre identifiant
+Apple au moment de l'installation — aucun certificat ne transite par
+l'intégration continue.
+
+Marche à suivre complète, avec ou sans Mac : **[docs/INSTALL-IPHONE.md](docs/INSTALL-IPHONE.md)**.
+
 ## Organisation du dépôt
 
 ```
