@@ -36,8 +36,19 @@ jobs:
       - name: Installer Flutter ${{ env.FLUTTER_VERSION }}
         run: |
           set -euo pipefail
-          ARCH=$([ "$(uname -m)" = "arm64" ] && echo "_arm64" || echo "")
-          URL="https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos${ARCH}-${FLUTTER_VERSION}-stable.zip"
+          # L'URL est lue dans l'index officiel des versions plutôt que
+          # reconstruite à la main : le nom des archives diffère selon
+          # l'architecture, et une convention qui change casserait la
+          # construction en silence.
+          ARCH=$([ "$(uname -m)" = "arm64" ] && echo "arm64" || echo "x64")
+          INDEX=https://storage.googleapis.com/flutter_infra_release/releases/releases_macos.json
+          URL=$(curl -fsSL "$INDEX" | jq -r \
+            --arg v "$FLUTTER_VERSION" --arg a "$ARCH" '
+              .base_url as $b
+              | .releases[]
+              | select(.channel == "stable" and .version == $v and .dart_sdk_arch == $a)
+              | "\($b)/\(.archive)"' | head -1)
+          test -n "$URL" || { echo "::error::Flutter $FLUTTER_VERSION ($ARCH) introuvable dans l'index"; exit 1; }
           echo "Téléchargement de $URL"
           curl -fsSL -o /tmp/flutter.zip "$URL"
           unzip -q /tmp/flutter.zip -d "$RUNNER_TOOL_CACHE"

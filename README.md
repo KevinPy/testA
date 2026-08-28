@@ -80,6 +80,7 @@ app/lib/
 tools/
 ├── shapes.py         primitives géométriques
 ├── build_pages.py    génère la bibliothèque de dessins
+├── build_icon.py     génère l'icône, iOS et Android
 ├── seed.mjs          jeux de données pour les captures
 └── screenshots.mjs   captures automatisées de l'application réelle
 docs/screenshots/     toutes prises dans l'application, jamais des maquettes

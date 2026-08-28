@@ -120,6 +120,21 @@ flutter build web --release --no-web-resources-cdn
 
 ---
 
+## L'icône
+
+L'icône est générée, pas dessinée à la main :
+
+```bash
+python3 tools/build_icon.py     # 15 tailles iOS, 5 densités Android
+```
+
+Un gribouillage multicolore et le crayon qui vient de le tracer&nbsp;: deux
+éléments, parce qu'une icône se lit à 40 points sur un écran d'accueil
+encombré. Aucune transparence — iOS la refuserait et applique lui-même son
+masque arrondi.
+
+---
+
 ## Dépannage
 
 | Symptôme | Cause | Correctif |
