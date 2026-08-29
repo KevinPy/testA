@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:barbouille/data/pages.g.dart';
 import 'package:barbouille/l10n/app_strings.dart';
 import 'package:barbouille/models/coloring_page.dart';
+import 'package:barbouille/models/pattern.dart';
+import 'package:barbouille/models/sticker.dart';
 import 'package:barbouille/models/tool.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -21,9 +23,20 @@ List<String> _allStrings(AppStrings s) => <String>[
       s.settings, s.language, s.languageAuto, s.languageAutoDetail,
       s.close, s.cancel,
       s.parentalTitle, s.parentalInstruction, s.parentalHold,
+      s.atelierTitle, s.atelierHint, s.atelierTransform, s.atelierWorking,
+      s.atelierBlank, s.atelierFull, s.atelierPen, s.categoryAtelier,
+      s.deleteDrawingTitle, s.deleteDrawingBody, s.delete, s.keep,
+      s.openTools, s.sectionTools, s.sectionSize, s.sectionColors,
+      s.capture, s.captureTitle, s.captureSave, s.captureWorking,
+      s.captureDone, s.captureFailed, s.captureSize(1024),
+      s.channelValue(s.channelRed, 128),
+      s.sectionPatterns, s.patternNone, s.patternNoneA11y, s.patternsHint,
+      s.sectionStickers, s.stickersHint, s.stickerRemove,
       for (final ToolKind t in ToolKind.values) s.tool(t),
       for (final BrushSize b in BrushSize.values) s.brushSize(b),
       for (final BrushSize b in BrushSize.values) s.sizeLabel(b),
+      for (final PatternKind k in PatternKind.values) s.pattern(k),
+      for (final StickerKind k in StickerKind.values) s.sticker(k),
       for (final String c in <String>['animaux', 'vehicules', 'nature', 'gourmandises'])
         s.category(c),
     ];

@@ -5,7 +5,7 @@
 //   cd app && flutter build web --release --no-web-resources-cdn
 //   (cd app/build/web && python3 -m http.server 8099 &)
 //   node tools/screenshots.mjs
-import { withApp, stroke, tap, outDir } from './shotlib.mjs';
+import { withApp, stroke, tap, pinch, outDir } from './shotlib.mjs';
 import { parsePages, artwork, seedScript } from './seed.mjs';
 import { join } from 'node:path';
 
@@ -24,13 +24,31 @@ const T = {
   // le coloriage seulement deux : les repères diffèrent.
   atelier: { home: { x: 38, y: 327 }, tools: { x: 48, y: 407 }, transform: { x: 48, y: 497 } },
   drawer: {
-    tool: (i) => ({ x: 52 + i * 82, y: 128 }),
-    size: (i) => ({ x: 52 + i * 72, y: 246 }),
-    swatch: (i) => ({ x: 46 + (i % 5) * 67, y: 358 + Math.floor(i / 5) * 67 }),
-    addColor: { x: 46, y: 358 },
+    tool: (i) => ({ x: 46 + i * 67, y: 123 }),
+    size: (i) => ({ x: 52 + i * 72, y: 236 }),
+    swatch: (i) => ({ x: 46 + (i % 5) * 67, y: 352 + Math.floor(i / 5) * 67 }),
+    addColor: { x: 46, y: 352 },
+    // Les motifs sont en bas de la liste : ces repères valent une fois le
+    // tiroir défilé à fond.
+    pattern: (i) => ({ x: 47 + (i % 4) * 72, y: 710 + Math.floor(i / 4) * 72 }),
+    // La planche d'autocollants remplace tout le reste : elle commence donc
+    // juste sous la rangée d'outils.
+    sticker: (i) => ({ x: 55 + (i % 4) * 83.5, y: 290 + Math.floor(i / 4) * 83.5 }),
   },
 };
 const P = (x, y) => ({ x: T.page.ox + x * T.page.k, y: T.page.oy + y * T.page.k });
+
+// Index dans PatternKind : 0 = uni, puis pois, rayures, zigzag, étoiles,
+// cœurs, carreaux.
+const M = { uni: 0, pois: 1, rayures: 2, zigzag: 3, etoiles: 4, coeurs: 5, carreaux: 6 };
+
+// Index dans StickerKind.
+const S = {
+  etoile: 0, coeur: 1, arcenciel: 2, soleil: 3,
+  lune: 4, nuage: 5, fleur: 6, papillon: 7,
+  coccinelle: 8, poisson: 9, ballon: 10, fusee: 11,
+  voiture: 12, glace: 13, cupcake: 14, couronne: 15,
+};
 
 // Index dans kDefaultPalette
 const C = {
@@ -43,19 +61,37 @@ const C = {
 const shot = (page, name) =>
   page.screenshot({ path: join(OUT, name) }).then(() => console.log('✓', name));
 
+// Un coin de fond, hors du tiroir et hors de toute commande : on y gare le
+// pointeur avant une capture, sinon la pastille survolée affiche son infobulle
+// et se retrouve dans l'image.
+const IDLE = { x: 900, y: 60 };
+
 const openDrawer = async (page) => {
   await tap(page, T.menu.x, T.menu.y);
   await page.waitForTimeout(600);
+  await page.mouse.move(IDLE.x, IDLE.y);
+  await page.waitForTimeout(300);
 };
+/// On ferme comme le ferait un enfant : en appuyant à côté du tiroir.
+/// La touche Échap fait bien disparaître le tiroir, mais le premier appui
+/// suivant sur la feuille se perd — ce n'est pas ce que vit l'utilisateur.
 const closeDrawer = async (page) => {
-  await page.keyboard.press('Escape');
-  // Le voile du tiroir absorbe les appuis pendant son animation de fermeture :
-  // sans cette attente, le premier coup de pot de peinture se perd.
-  await page.waitForTimeout(800);
+  await tap(page, IDLE.x, IDLE.y);
+  await page.waitForTimeout(700);
 };
 
-/// Choisit un outil, puis une couleur, en une seule ouverture du tiroir.
-async function choose(page, { tool, size, color }) {
+/// Fait défiler le tiroir jusqu'en bas, là où vivent les motifs.
+const scrollDrawer = async (page) => {
+  await page.mouse.move(180, 600);
+  await page.mouse.wheel(0, 800);
+  await page.waitForTimeout(400);
+  await page.mouse.move(IDLE.x, IDLE.y);
+  await page.waitForTimeout(300);
+};
+
+/// Choisit outil, taille, couleur, motif ou autocollant, en une seule
+/// ouverture du tiroir.
+async function choose(page, { tool, size, color, pattern, sticker }) {
   await openDrawer(page);
   if (tool !== undefined) await tap(page, T.drawer.tool(tool).x, T.drawer.tool(tool).y);
   if (size !== undefined) await tap(page, T.drawer.size(size).x, T.drawer.size(size).y);
@@ -63,6 +99,15 @@ async function choose(page, { tool, size, color }) {
     // La première case du nuancier est le bouton « créer une couleur ».
     const sw = T.drawer.swatch(color + 1);
     await tap(page, sw.x, sw.y);
+  }
+  if (pattern !== undefined) {
+    await scrollDrawer(page);
+    const m = T.drawer.pattern(pattern);
+    await tap(page, m.x, m.y);
+  }
+  if (sticker !== undefined) {
+    const k = T.drawer.sticker(sticker);
+    await tap(page, k.x, k.y);
   }
   await closeDrawer(page);
 }
@@ -211,6 +256,75 @@ await withApp({ width: 1194, height: 834, dsr: 2, locale: 'en-US' }, async (page
   await tap(page, T.drawer.addColor.x, T.drawer.addColor.y);
   await page.waitForTimeout(900);
   await shot(page, '15-modale-rvb-anglais.png');
+});
+
+// ═══════════════════════════ MOTIFS ════════════════════════════════════════
+// Le même pot de peinture, la même couleur, mais une texture : le motif se
+// pose sous forme de tuile ancrée sur la page, pas sur le geste.
+await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
+  await tap(page, 157, 320);                       // « Le chat câlin »
+  await page.waitForTimeout(1300);
+
+  await choose(page, { tool: 2, color: C.ambre }); // pot, aplat
+  for (const [x, y] of [[330, 650], [800, 770], [370, 862], [630, 862]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
+  }
+  // Le corps reçoit un aplat, puis des pois d'une autre couleur par-dessus :
+  // les creux du motif laissent voir la première couche.
+  await choose(page, { color: C.sable });
+  await tap(page, P(450, 480).x, P(450, 480).y);
+  await choose(page, { color: C.corail, pattern: M.pois });
+  await tap(page, P(450, 480).x, P(450, 480).y);
+
+  await choose(page, { color: C.rose, pattern: M.coeurs });
+  await tap(page, P(500, 300).x, P(500, 300).y);   // la tête
+  await choose(page, { color: C.violet, pattern: M.rayures });
+  for (const [x, y] of [[310, 165], [690, 165]]) { // les oreilles
+    await tap(page, P(x, y).x, P(x, y).y);
+  }
+  await choose(page, { tool: 1, size: 1, color: C.turquoise, pattern: M.etoiles });
+  await stroke(page, [P(420, 700), P(500, 660), P(580, 700)]);
+  await page.waitForTimeout(400);
+  await shot(page, '22-motifs.png');
+
+  await openDrawer(page);
+  await scrollDrawer(page);
+  await shot(page, '23-tiroir-motifs.png');
+});
+
+// ═══════════════════════════ AUTOCOLLANTS ══════════════════════════════════
+await withApp({ width: 1194, height: 834, dsr: 2 }, async (page, context) => {
+  const cdp = await context.newCDPSession(page);
+  await tap(page, 157, 320);
+  await page.waitForTimeout(1300);
+
+  await choose(page, { tool: 2, color: C.ambre });
+  for (const [x, y] of [[330, 650], [500, 300], [800, 770]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
+  }
+  await choose(page, { color: C.sable });
+  await tap(page, P(450, 480).x, P(450, 480).y);
+
+  // La planche d'autocollants : on la montre ouverte, puis on colle.
+  await choose(page, { tool: 4 });
+  await openDrawer(page);
+  await shot(page, '24-tiroir-autocollants.png');
+  await closeDrawer(page);
+  await page.waitForTimeout(300);
+
+  await tap(page, P(500, 730).x, P(500, 730).y);   // une étoile sur le ventre
+  await choose(page, { sticker: S.coeur });
+  await tap(page, P(700, 250).x, P(700, 250).y);
+  await choose(page, { sticker: S.arcenciel });
+  await tap(page, P(250, 220).x, P(250, 220).y);
+  await choose(page, { sticker: S.papillon });
+  await tap(page, P(790, 560).x, P(790, 560).y);
+
+  // Deux doigts : le dernier posé grandit et tourne. Le cadre bleu et sa
+  // croix suivent — ils restent à l'écran, jamais dans l'image exportée.
+  await pinch(page, cdp, P(790, 560), { from: 55, to: 95, turn: -0.45 });
+  await page.waitForTimeout(400);
+  await shot(page, '25-autocollants.png');
 });
 
 // ═══════════════════════════ CAPTURE ═══════════════════════════════════════

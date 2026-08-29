@@ -27,6 +27,9 @@ d'un bouton.
 - Galerie de **14 dessins** vectoriels classés par thème, avec reprise en cours
 - **Crayon** (grain de cire), **feutre**, **pot de peinture**, **gomme** × 3 tailles
 - **24 couleurs** + création de couleurs en **RVB**, mémorisées
+- **6 motifs** — pois, rayures, zigzag, étoiles, cœurs, carreaux — que prennent
+  le crayon, le feutre et le pot
+- **16 autocollants** à coller, faire glisser, pincer et faire tourner
 - **Atelier** : dessiner son propre contour, l'application en déduit les zones
   coloriables et le range dans « Mes dessins »
 - **Français et anglais** — interface et titres des dessins, automatique par défaut
@@ -47,6 +50,25 @@ un écran qui ne l'est pas — elles ne coûtent donc aucune surface de dessin.
 ![Le tiroir d'outils](docs/screenshots/20-tiroir-outils.png)
 ![Paysage sur iPhone](docs/screenshots/21-paysage-iphone.png)
 
+## Motifs et autocollants
+
+Un motif n'est pas un outil de plus : c'est une **texture que prennent le
+crayon, le feutre et le pot**. La tuile est ancrée sur la page et non sur le
+geste, si bien qu'un trait *révèle* le motif comme on gratte une surface et que
+deux traits voisins se raccordent. Ses creux restent translucides : on pose un
+aplat, puis on sème des pois d'une autre couleur par-dessus.
+
+![Motifs](docs/screenshots/22-motifs.png)
+
+Les autocollants se posent d'un appui, se déplacent du doigt, se **pincent** et
+se **font tourner** à deux doigts, et s'enlèvent d'une croix — un retrait que
+↩︎ annule. Ils sont **dessinés en vectoriel**, pas repris d'une police d'émojis :
+nets à toute taille, identiques sur iOS, Android et le web, et disponibles hors
+ligne.
+
+![Autocollants](docs/screenshots/25-autocollants.png)
+![La planche d'autocollants](docs/screenshots/24-tiroir-autocollants.png)
+
 ## Langue
 
 Français et anglais. Par défaut l'application **suit la langue de l'appareil**&nbsp;;
@@ -65,7 +87,7 @@ puis les traductions — que l'analyseur signale une par une.
 cd app
 flutter pub get
 flutter run            # appareil ou simulateur
-flutter test           # 56 tests
+flutter test           # 87 tests
 ```
 
 ## Essayer tout de suite

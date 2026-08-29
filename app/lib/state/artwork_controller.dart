@@ -5,7 +5,11 @@ import 'package:flutter/material.dart';
 
 import '../models/coloring_page.dart';
 import '../models/paint_op.dart';
+import '../models/pattern.dart';
+import '../models/sticker.dart';
 import '../models/tool.dart';
+import '../widgets/artwork_painter.dart'
+    show kStickerGrabRadius, stickerHandleAt, stickerHit;
 
 /// L'état d'un coloriage en cours : outils choisis et pile d'opérations.
 class ArtworkController extends ChangeNotifier {
@@ -22,13 +26,38 @@ class ArtworkController extends ChangeNotifier {
   List<PaintOp> get ops => List<PaintOp>.unmodifiable(_ops);
   bool get canUndo => _ops.isNotEmpty;
   bool get canRedo => _redo.isNotEmpty;
-  /// Vrai si rien n'est visible : pile vide, ou rien depuis le dernier effacement.
-  bool get isBlank =>
-      _ops.isEmpty || _ops.last is ClearOp;
+  /// Vrai si rien n'est visible : ni couleur, ni autocollant, depuis le
+  /// dernier effacement. Poser un autocollant puis le retirer y ramène, si
+  /// bien que « garder mon dessin » ne propose jamais une feuille blanche.
+  bool get isBlank {
+    bool painted = false;
+    final Set<int> stickers = <int>{};
+    for (final PaintOp op in _ops) {
+      switch (op) {
+        case ClearOp():
+          painted = false;
+          stickers.clear();
+        case StickerOp():
+          stickers.add(op.id);
+        case RemoveStickerOp():
+          stickers.remove(op.id);
+        case StrokeOp():
+        case FillOp():
+          painted = true;
+      }
+    }
+    return !painted && stickers.isEmpty;
+  }
 
   ToolKind tool = ToolKind.feutre;
   BrushSize size = BrushSize.moyen;
   Color color = const Color(0xFFE23B3B);
+
+  /// Motif courant, ou `null` pour un aplat de couleur.
+  PatternKind? pattern;
+
+  /// Autocollant courant : celui que pose le prochain appui.
+  StickerKind sticker = StickerKind.etoile;
 
   /// Zones magiques : le trait reste dans la zone touchée au premier contact.
   /// Activé par défaut — c'est le mode qui met en confiance les plus jeunes.
@@ -55,6 +84,7 @@ class ArtworkController extends ChangeNotifier {
       points: <Offset>[p],
       clipRegion: clip,
       seed: _rng.nextInt(1 << 30),
+      pattern: tool.usesPattern ? pattern : null,
     );
     notifyListeners();
   }
@@ -80,8 +110,82 @@ class ArtworkController extends ChangeNotifier {
 
   void _fillAt(Offset p) {
     final int region = page.hitTest(p);
-    _ops.add(FillOp(region: region, color: color.toARGB32()));
+    _ops.add(FillOp(region: region, color: color.toARGB32(), pattern: pattern));
     _redo.clear();
+    notifyListeners();
+  }
+
+  // ── Autocollants ──────────────────────────────────────────────────────────
+
+  /// Celui qui porte son cadre et sa croix de retrait.
+  StickerOp? selected;
+
+  StickerOp? _dragged;
+  Offset _grabFocal = Offset.zero;
+  Offset _grabCenter = Offset.zero;
+  double _grabScale = 1;
+  double _grabRotation = 0;
+
+  /// Début d'un geste sur la couche des autocollants.
+  ///
+  /// Trois issues : la croix de retrait enlève l'autocollant choisi, un appui
+  /// sur un autocollant déjà posé le saisit, et un appui dans le vide en pose
+  /// un nouveau — que le doigt peut emmener sans se relever.
+  void beginSticker(Offset p, {required bool singleFinger}) {
+    final StickerOp? sel = selected;
+    if (sel != null &&
+        (p - stickerHandleAt(sel)).distance <= kStickerGrabRadius) {
+      removeSticker(sel);
+      return;
+    }
+
+    StickerOp? target;
+    for (final StickerOp st in visibleStickers(_ops).reversed) {
+      if (stickerHit(st, p)) {
+        target = st;
+        break;
+      }
+    }
+
+    if (target == null) {
+      // Deux doigts posés dans le vide, c'est un pincement mal visé et non une
+      // demande d'autocollant : on ne sème pas une étoile pour autant.
+      if (!singleFinger) return;
+      target = StickerOp(id: _rng.nextInt(1 << 30), kind: sticker, center: p);
+      _ops.add(target);
+      _redo.clear();
+    }
+
+    selected = target;
+    _dragged = target;
+    _grabFocal = p;
+    _grabCenter = target.center;
+    _grabScale = target.scale;
+    _grabRotation = target.rotation;
+    notifyListeners();
+  }
+
+  /// Déplacement, pincement et rotation, relatifs au début du geste.
+  void updateSticker(Offset focal, double scale, double rotation) {
+    final StickerOp? st = _dragged;
+    if (st == null) return;
+    st.center = _grabCenter + (focal - _grabFocal);
+    st.scale = (_grabScale * scale).clamp(kStickerMinScale, kStickerMaxScale);
+    st.rotation = _grabRotation + rotation;
+    notifyListeners();
+  }
+
+  void endSticker() {
+    if (_dragged == null) return;
+    _dragged = null;
+    notifyListeners();
+  }
+
+  void removeSticker(StickerOp st) {
+    _ops.add(RemoveStickerOp(st.id));
+    _redo.clear();
+    if (identical(selected, st)) selected = null;
+    _dragged = null;
     notifyListeners();
   }
 
@@ -90,12 +194,14 @@ class ArtworkController extends ChangeNotifier {
   void undo() {
     if (_ops.isEmpty) return;
     _redo.add(_ops.removeLast());
+    _forgetVanishedSelection();
     notifyListeners();
   }
 
   void redo() {
     if (_redo.isEmpty) return;
     _ops.add(_redo.removeLast());
+    _forgetVanishedSelection();
     notifyListeners();
   }
 
@@ -103,13 +209,44 @@ class ArtworkController extends ChangeNotifier {
     if (isBlank) return;
     _ops.add(const ClearOp());
     _redo.clear();
+    selected = null;
     notifyListeners();
+  }
+
+  /// Un ↩︎ peut faire disparaître l'autocollant sélectionné : son cadre doit
+  /// partir avec lui, sinon il resterait à flotter sur le vide.
+  void _forgetVanishedSelection() {
+    final StickerOp? sel = selected;
+    if (sel == null) return;
+    if (!visibleStickers(_ops).any((StickerOp s) => identical(s, sel))) {
+      selected = null;
+      _dragged = null;
+    }
   }
 
   // ── Réglages ──────────────────────────────────────────────────────────────
 
   void setTool(ToolKind t) {
     tool = t;
+    // Le cadre bleu et sa croix n'ont de sens que sous l'outil autocollant :
+    // ailleurs, ils barreraient le dessin sans qu'on puisse les enlever.
+    if (t != ToolKind.autocollant) selected = null;
+    notifyListeners();
+  }
+
+  void setPattern(PatternKind? p) {
+    pattern = p;
+    if (!tool.usesPattern) {
+      tool = ToolKind.feutre;
+      selected = null;
+    }
+    notifyListeners();
+  }
+
+  /// Choisir un autocollant, c'est vouloir en poser un : l'outil suit.
+  void setSticker(StickerKind k) {
+    sticker = k;
+    tool = ToolKind.autocollant;
     notifyListeners();
   }
 
@@ -120,9 +257,12 @@ class ArtworkController extends ChangeNotifier {
 
   void setColor(Color c) {
     color = c;
-    // Choisir une couleur alors que la gomme est active veut dire « je veux
-    // colorier » : on revient au dernier outil de tracé.
-    if (tool == ToolKind.gomme) tool = ToolKind.feutre;
+    // Choisir une couleur alors que la gomme ou les autocollants sont actifs
+    // veut dire « je veux colorier » : on revient à un outil de tracé.
+    if (!tool.usesColor) {
+      tool = ToolKind.feutre;
+      selected = null;
+    }
     notifyListeners();
   }
 

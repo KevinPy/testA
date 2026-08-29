@@ -1,6 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../l10n/app_strings.dart';
+import '../models/pattern.dart';
+import '../models/sticker.dart';
 import '../models/tool.dart';
 import '../theme/app_theme.dart';
 
@@ -201,6 +205,144 @@ class AddColorDot extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Pastille d'un motif, peinte dans la couleur courante.
+///
+/// `null` pour [kind] donne la pastille « Uni » : un aplat, c'est-à-dire
+/// exactement ce que peint l'outil quand aucun motif n'est choisi.
+class PatternChip extends StatelessWidget {
+  const PatternChip({
+    super.key,
+    required this.kind,
+    required this.color,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final PatternKind? kind;
+  final Color color;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    final String name = kind == null ? s.patternNone : s.pattern(kind!);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: kind == null ? s.patternNoneA11y : name,
+      child: Tooltip(
+        message: name,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            width: 62,
+            height: 62,
+            decoration: BoxDecoration(
+              // Fond pâle plutôt que blanc : les creux du motif sont
+              // translucides, et c'est justement ce qu'il faut montrer.
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: selected ? AppColors.ink : AppColors.ink.withValues(alpha: 0.15),
+                width: selected ? 4 : 2,
+              ),
+              boxShadow: selected ? kSoftShadow : null,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: CustomPaint(painter: _PatternChipPainter(kind, color)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PatternChipPainter extends CustomPainter {
+  const _PatternChipPainter(this.kind, this.color);
+
+  final PatternKind? kind;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Tuile réduite de moitié : la pastille montre alors quatre répétitions,
+    // donc le motif et non un fragment de motif.
+    canvas.drawRect(
+      Offset.zero & size,
+      patternBrush(kind, color, tileScale: 0.5),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_PatternChipPainter old) =>
+      old.kind != kind || old.color != color;
+}
+
+/// Pastille d'un autocollant, dessinée à sa vraie silhouette.
+class StickerChip extends StatelessWidget {
+  const StickerChip({
+    super.key,
+    required this.kind,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final StickerKind kind;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final String label = AppStrings.of(context).sticker(kind);
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: Tooltip(
+        message: label,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 160),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: selected ? AppColors.surface : Colors.transparent,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: selected ? AppColors.primary : Colors.transparent,
+                width: 3,
+              ),
+            ),
+            child: CustomPaint(painter: _StickerChipPainter(kind)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StickerChipPainter extends CustomPainter {
+  const _StickerChipPainter(this.kind);
+
+  final StickerKind kind;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double side = math.min(size.width, size.height);
+    canvas.save();
+    canvas.translate((size.width - side) / 2, (size.height - side) / 2);
+    paintSticker(canvas, kind, side);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_StickerChipPainter old) => old.kind != kind;
 }
 
 /// Bouton rond des actions flottantes (accueil, annuler, capture…).

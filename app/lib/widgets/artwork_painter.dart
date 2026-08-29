@@ -5,15 +5,19 @@ import 'package:flutter/material.dart';
 
 import '../models/coloring_page.dart';
 import '../models/paint_op.dart';
+import '../models/pattern.dart';
+import '../models/sticker.dart';
 import '../models/tool.dart';
 
 /// Rendu d'un coloriage.
 ///
-/// Le modèle de composition tient en trois couches, toujours dans cet ordre :
+/// Le modèle de composition tient en quatre couches, toujours dans cet ordre :
 ///
 ///   1. le papier ;
 ///   2. la COUCHE COULEUR — tout ce que l'enfant a posé ;
-///   3. la COUCHE ENCRE — le trait noir du dessin.
+///   3. la COUCHE ENCRE — le trait noir du dessin ;
+///   4. les AUTOCOLLANTS — collés PAR-DESSUS tout le reste, trait noir
+///      compris, parce que c'est ce que fait un autocollant sur du papier.
 ///
 /// L'encre étant redessinée par-dessus la couleur à chaque image, l'enfant
 /// « colorie sous le trait noir » en permanence : c'est le comportement par
@@ -28,6 +32,7 @@ class ArtworkPainter extends CustomPainter {
     required this.live,
     this.showHints = false,
     this.inkScale = 1.0,
+    this.selected,
   });
 
   final CompiledPage page;
@@ -44,6 +49,11 @@ class ArtworkPainter extends CustomPainter {
   /// Compense l'échelle d'affichage pour que le trait garde une épaisseur
   /// visuellement constante sur une vignette comme en plein écran.
   final double inkScale;
+
+  /// L'autocollant en cours de manipulation, entouré de son cadre et de sa
+  /// croix de retrait. Toujours nul à l'export : le cadre est une aide à
+  /// l'écran, pas un morceau du dessin.
+  final StickerOp? selected;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -82,6 +92,9 @@ class ArtworkPainter extends CustomPainter {
     // ── Couche encre ──────────────────────────────────────────────────────
     _drawInk(canvas);
 
+    // ── Autocollants ──────────────────────────────────────────────────────
+    _drawStickers(canvas);
+
     canvas.restore();
   }
 
@@ -89,7 +102,7 @@ class ArtworkPainter extends CustomPainter {
   static int? _regionOf(PaintOp op) => switch (op) {
         FillOp(:final int region) => region,
         StrokeOp(:final int? clipRegion) => clipRegion,
-        ClearOp() => null,
+        ClearOp() || StickerOp() || RemoveStickerOp() => null,
       };
 
   /// Exécute [draw] en ne laissant subsister que la surface visible de [region].
@@ -131,6 +144,10 @@ class ArtworkPainter extends CustomPainter {
     int i = 0;
     while (i < list.length) {
       final PaintOp op = list[i];
+      if (op is StickerOp || op is RemoveStickerOp) {
+        i++; // couche du dessus, posée après l'encre
+        continue;
+      }
       if (op is ClearOp) {
         canvas.drawRect(bounds, Paint()..blendMode = BlendMode.clear);
         i++;
@@ -139,7 +156,7 @@ class ArtworkPainter extends CustomPainter {
       final int? region = _regionOf(op);
       int j = i + 1;
       while (j < list.length &&
-          list[j] is! ClearOp &&
+          (list[j] is StrokeOp || list[j] is FillOp) &&
           _regionOf(list[j]) == region) {
         j++;
       }
@@ -162,7 +179,9 @@ class ArtworkPainter extends CustomPainter {
   void _drawOne(Canvas canvas, PaintOp op) {
     switch (op) {
       case ClearOp():
-        break; // traité par _drawSequence
+      case StickerOp():
+      case RemoveStickerOp():
+        break; // traités ailleurs
       case FillOp():
         // Le contour brut suffit : _confined a déjà posé le détourage et
         // retirera les zones supérieures.
@@ -170,9 +189,7 @@ class ArtworkPainter extends CustomPainter {
           op.region == kBackgroundRegion
               ? (Path()..addRect(Offset.zero & page.source.size))
               : page.regions[op.region],
-          Paint()
-            ..color = Color(op.color)
-            ..isAntiAlias = true,
+          patternBrush(op.pattern, Color(op.color)),
         );
       case StrokeOp():
         switch (op.tool) {
@@ -183,7 +200,8 @@ class ArtworkPainter extends CustomPainter {
           case ToolKind.gomme:
             _drawEraser(canvas, op);
           case ToolKind.pot:
-            break; // le pot n'émet jamais de StrokeOp
+          case ToolKind.autocollant:
+            break; // ni le pot ni l'autocollant n'émettent de StrokeOp
         }
     }
   }
@@ -192,8 +210,7 @@ class ArtworkPainter extends CustomPainter {
   void _drawMarker(Canvas canvas, StrokeOp op) {
     canvas.drawPath(
       _smoothPath(op.points),
-      Paint()
-        ..color = Color(op.color)
+      patternBrush(op.pattern, Color(op.color))
         ..style = PaintingStyle.stroke
         ..strokeWidth = op.width
         ..strokeCap = StrokeCap.round
@@ -212,8 +229,7 @@ class ArtworkPainter extends CustomPainter {
 
     canvas.drawPath(
       path,
-      Paint()
-        ..color = base.withValues(alpha: 0.45)
+      patternBrush(op.pattern, base.withValues(alpha: 0.45))
         ..style = PaintingStyle.stroke
         ..strokeWidth = op.width
         ..strokeCap = StrokeCap.round
@@ -228,8 +244,7 @@ class ArtworkPainter extends CustomPainter {
       canvas.translate(dx, dy);
       canvas.drawPath(
         path,
-        Paint()
-          ..color = base.withValues(alpha: 0.20)
+        patternBrush(op.pattern, base.withValues(alpha: 0.20))
           ..style = PaintingStyle.stroke
           ..strokeWidth = op.width * (0.42 + rng.nextDouble() * 0.34)
           ..strokeCap = StrokeCap.round
@@ -303,6 +318,69 @@ class ArtworkPainter extends CustomPainter {
     }
   }
 
+  /// Les autocollants encore posés, puis le cadre de celui qu'on manipule.
+  void _drawStickers(Canvas canvas) {
+    for (final StickerOp st in visibleStickers(ops)) {
+      final double side = kStickerSize * st.scale;
+      canvas.save();
+      canvas.translate(st.center.dx, st.center.dy);
+      canvas.rotate(st.rotation);
+      canvas.translate(-side / 2, -side / 2);
+      paintSticker(canvas, st.kind, side);
+      canvas.restore();
+    }
+
+    final StickerOp? sel = selected;
+    if (sel == null) return;
+
+    // Le cadre et sa croix gardent une taille constante quelle que soit celle
+    // de l'autocollant : sur un tout petit soleil, une croix minuscule serait
+    // impossible à viser avec un doigt d'enfant.
+    final double half = kStickerSize * sel.scale / 2 + kStickerFrameGap;
+    canvas.save();
+    canvas.translate(sel.center.dx, sel.center.dy);
+    canvas.rotate(sel.rotation);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromCircle(center: Offset.zero, radius: half),
+        const Radius.circular(18),
+      ),
+      Paint()
+        ..color = const Color(0xFF2C7BE5)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 6
+        ..isAntiAlias = true,
+    );
+
+    final Offset cross = Offset(half, -half);
+    canvas.drawCircle(
+      cross,
+      kStickerHandleRadius,
+      Paint()
+        ..color = const Color(0xFFE23B3B)
+        ..isAntiAlias = true,
+    );
+    canvas.drawCircle(
+      cross,
+      kStickerHandleRadius,
+      Paint()
+        ..color = const Color(0xFFFFFFFF)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5
+        ..isAntiAlias = true,
+    );
+    final Paint bar = Paint()
+      ..color = const Color(0xFFFFFFFF)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..isAntiAlias = true;
+    const double a = kStickerHandleRadius * 0.42;
+    canvas.drawLine(cross + const Offset(-a, -a), cross + const Offset(a, a), bar);
+    canvas.drawLine(cross + const Offset(-a, a), cross + const Offset(a, -a), bar);
+    canvas.restore();
+  }
+
   static Path _smoothPath(List<Offset> pts) => smoothPathOfPoints(pts);
 
   @override
@@ -312,7 +390,41 @@ class ArtworkPainter extends CustomPainter {
       !identical(old.ops, ops) ||
       old.live != live ||
       old.live?.points.length != live?.points.length ||
+      !identical(old.selected, selected) ||
       old.showHints != showHints;
+}
+
+/// Écart entre l'autocollant et son cadre de sélection, en coordonnées page.
+const double kStickerFrameGap = 16;
+
+/// Rayon de la croix de retrait. Large : la page fait 1000 unités pour environ
+/// 700 points à l'écran, une pastille de 30 unités en occupe une vingtaine.
+const double kStickerHandleRadius = 30;
+
+/// Rayon de la CIBLE de la croix, plus généreux que la pastille elle-même :
+/// un doigt de trois ans vise mal.
+const double kStickerGrabRadius = 44;
+
+/// Position de la croix de retrait de [st], en coordonnées page.
+///
+/// Le peintre la dessine et le geste doit la viser : une seule formule pour
+/// les deux, sinon la croix finirait par ne plus être là où l'on appuie.
+Offset stickerHandleAt(StickerOp st) {
+  final double d = kStickerSize * st.scale / 2 + kStickerFrameGap;
+  final double c = math.cos(st.rotation), s = math.sin(st.rotation);
+  return st.center + Offset(d * c + d * s, d * s - d * c);
+}
+
+/// Vrai si [p] (coordonnées page) touche [st].
+///
+/// Boîte carrée plutôt que silhouette exacte : un enfant vise le voisinage
+/// d'un autocollant, pas le creux entre deux branches d'une étoile.
+bool stickerHit(StickerOp st, Offset p) {
+  final Offset d = p - st.center;
+  final double c = math.cos(-st.rotation), s = math.sin(-st.rotation);
+  final Offset local = Offset(d.dx * c - d.dy * s, d.dx * s + d.dy * c);
+  final double half = kStickerSize * st.scale / 2;
+  return local.dx.abs() <= half && local.dy.abs() <= half;
 }
 
 /// Lisse la suite de points du doigt en courbes quadratiques passant par les

@@ -79,6 +79,29 @@ export async function stroke(page, pts, { steps = 14 } = {}) {
   await page.waitForTimeout(120);
 }
 
+/// Un pincement à deux doigts, avec rotation. Playwright ne sait piloter qu'un
+/// pointeur : on passe donc par le protocole de débogage de Chromium, seul
+/// moyen d'envoyer deux contacts simultanés — et donc de vérifier le geste que
+/// les autocollants demandent.
+export async function pinch(page, cdp, center,
+  { from = 55, to = 130, turn = 0, steps = 18 } = {}) {
+  const pair = (r, a) => [
+    { x: center.x + Math.cos(a) * r, y: center.y + Math.sin(a) * r, id: 1 },
+    { x: center.x - Math.cos(a) * r, y: center.y - Math.sin(a) * r, id: 2 },
+  ];
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pair(from, 0) });
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    await cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchMove',
+      touchPoints: pair(from + (to - from) * t, turn * t),
+    });
+    await page.waitForTimeout(16);
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  await page.waitForTimeout(300);
+}
+
 export async function tap(page, x, y) {
   await page.mouse.click(x, y);
   await page.waitForTimeout(350);

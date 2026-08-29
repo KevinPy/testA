@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
+import '../models/pattern.dart';
+import '../models/sticker.dart';
 import '../models/tool.dart';
 
 /// Les langues proposées.
@@ -139,6 +141,7 @@ class AppStrings {
         ToolKind.feutre => _t(fr: 'Feutre', en: 'Marker'),
         ToolKind.pot => _t(fr: 'Pot de peinture', en: 'Paint bucket'),
         ToolKind.gomme => _t(fr: 'Gomme', en: 'Eraser'),
+        ToolKind.autocollant => _t(fr: 'Autocollants', en: 'Stickers'),
       };
 
   String brushSize(BrushSize s) => switch (s) {
@@ -149,6 +152,53 @@ class AppStrings {
 
   String sizeLabel(BrushSize s) =>
       _t(fr: 'Taille ${brushSize(s)}', en: '${brushSize(s)} size');
+
+  // ── Motifs ────────────────────────────────────────────────────────────────
+  String get sectionPatterns => _t(fr: 'Motifs', en: 'Patterns');
+  String get patternNone => _t(fr: 'Uni', en: 'Plain');
+  String get patternNoneA11y =>
+      _t(fr: 'Sans motif, couleur unie', en: 'No pattern, plain colour');
+  String get patternsHint => _t(
+        fr: 'Le motif suit le crayon, le feutre et le pot.',
+        en: 'The pattern follows the crayon, the marker and the bucket.',
+      );
+  String pattern(PatternKind p) => switch (p) {
+        PatternKind.pois => _t(fr: 'Pois', en: 'Dots'),
+        PatternKind.rayures => _t(fr: 'Rayures', en: 'Stripes'),
+        PatternKind.zigzag => _t(fr: 'Zigzag', en: 'Zigzag'),
+        PatternKind.etoiles => _t(fr: 'Étoiles', en: 'Stars'),
+        PatternKind.coeurs => _t(fr: 'Cœurs', en: 'Hearts'),
+        PatternKind.carreaux => _t(fr: 'Carreaux', en: 'Checks'),
+      };
+
+  // ── Autocollants ──────────────────────────────────────────────────────────
+  String get sectionStickers => _t(fr: 'Autocollants', en: 'Stickers');
+  String get stickersHint => _t(
+        fr: 'Appuie sur le dessin pour le coller. Fais-le glisser, tourne-le, '
+            'écarte deux doigts pour l\'agrandir.',
+        en: 'Tap the picture to stick it on. Drag it, spin it, pinch with two '
+            'fingers to make it bigger.',
+      );
+  String get stickerRemove =>
+      _t(fr: 'Enlever l\'autocollant', en: 'Remove the sticker');
+  String sticker(StickerKind k) => switch (k) {
+        StickerKind.etoile => _t(fr: 'Étoile', en: 'Star'),
+        StickerKind.coeur => _t(fr: 'Cœur', en: 'Heart'),
+        StickerKind.arcenciel => _t(fr: 'Arc-en-ciel', en: 'Rainbow'),
+        StickerKind.soleil => _t(fr: 'Soleil', en: 'Sun'),
+        StickerKind.lune => _t(fr: 'Lune', en: 'Moon'),
+        StickerKind.nuage => _t(fr: 'Nuage', en: 'Cloud'),
+        StickerKind.fleur => _t(fr: 'Fleur', en: 'Flower'),
+        StickerKind.papillon => _t(fr: 'Papillon', en: 'Butterfly'),
+        StickerKind.coccinelle => _t(fr: 'Coccinelle', en: 'Ladybird'),
+        StickerKind.poisson => _t(fr: 'Poisson', en: 'Fish'),
+        StickerKind.ballon => _t(fr: 'Ballon', en: 'Balloon'),
+        StickerKind.fusee => _t(fr: 'Fusée', en: 'Rocket'),
+        StickerKind.voiture => _t(fr: 'Voiture', en: 'Car'),
+        StickerKind.glace => _t(fr: 'Glace', en: 'Ice cream'),
+        StickerKind.cupcake => _t(fr: 'Petit gâteau', en: 'Cupcake'),
+        StickerKind.couronne => _t(fr: 'Couronne', en: 'Crown'),
+      };
 
   // ── Couleurs ──────────────────────────────────────────────────────────────
   String get colorSwatch => _t(fr: 'Couleur', en: 'Colour');

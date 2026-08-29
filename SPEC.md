@@ -178,12 +178,13 @@ barres laissaient au dessin **environ 12 % de l'écran** — il tenait dans un
 timbre. La feuille en occupe désormais la plus grande part qu'un carré puisse
 prendre dans ce cadre, soit 46 %.
 
-### 5.3 Le tiroir et les quatre outils
+### 5.3 Le tiroir et les cinq outils
 
 Un bouton **« Mes outils »** ouvre un tiroir qui regroupe tout ce qui se choisit :
-les quatre outils, les trois épaisseurs, le nuancier et la création de couleur.
-Le tiroir défile — en paysage sur téléphone, la hauteur utile descend sous
-400 points et le nuancier n'y tiendrait pas d'un bloc.
+les cinq outils, les trois épaisseurs, le nuancier, la création de couleur, les
+motifs et la planche d'autocollants. Le tiroir défile — en paysage sur
+téléphone, la hauteur utile descend sous 400 points et le nuancier n'y tiendrait
+pas d'un bloc.
 
 **L'ouverture par glissement depuis le bord est désactivée** : un trait commencé
 au bord gauche de la feuille doit colorier, pas ouvrir le tiroir.
@@ -195,6 +196,15 @@ au bord gauche de la feuille doit colorier, pas ouvrir le tiroir.
 | **Feutre** | Opaque, épaisseur constante, extrémités rondes | Remplir vite et franchement. **Outil par défaut** |
 | **Pot de peinture** | Remplit la zone touchée d'un coup | La récompense immédiate. Aucun temps de calcul, aucune fuite (§ 6.2) |
 | **Gomme** | Efface la couleur | **Ne peut jamais entamer le trait noir** : le dessin de départ est indestructible |
+| **Autocollants** | Colle une image toute faite, qu'on déplace, pince et fait tourner | La touche personnelle qui ne demande aucune adresse du geste (§ 5.11) |
+
+Les cinq tiennent sur **une seule rangée**, quitte à passer de 72 à 57 points de
+côté : un outil renvoyé à la ligne suivante passe pour un accessoire, et un
+enfant compare ce qu'il voit d'un coup d'œil.
+
+Le tiroir n'affiche que ce qui agit sur l'outil courant : sous l'outil
+autocollant, la planche remplace taille, couleurs et motifs — aucun des trois ne
+s'applique à une image que l'on colle.
 
 Trois épaisseurs : **Petit** (18), **Moyen** (46, défaut), **Grand** (96), en
 unités de la page (1000 × 1000). Elles suivent donc le zoom et restent
@@ -282,6 +292,89 @@ du personnage sans déborder *sur* lui.
 Le réglage est propre à la séance et **n'est pas mémorisé entre deux dessins** :
 il redémarre toujours sur « Zones magiques ». Un parent ne doit jamais trouver
 l'application dans un état qu'il n'a pas choisi.
+
+### 5.10 Motifs — **livré**
+
+*Capture : `22-motifs.png`, `23-tiroir-motifs.png`*
+
+**Six motifs — pois, rayures, zigzag, étoiles, cœurs, carreaux — plus « Uni ».**
+Le motif n'est pas un outil de plus : c'est une **texture que prennent le
+crayon, le feutre et le pot**. On choisit sa couleur comme d'habitude, on
+choisit un motif, et l'outil peint la texture au lieu d'un aplat.
+
+Trois décisions valent d'être notées.
+
+**La tuile est ancrée sur la page, pas sur le geste.** Un trait de crayon
+*révèle* le motif comme on gratte une surface, et deux traits voisins se
+raccordent au lieu de se contredire. Ancrer la tuile sur le geste aurait donné
+autant de grilles décalées que de coups de crayon.
+
+**Un motif ne recouvre pas la zone : ses creux restent translucides.** Un enfant
+peut donc poser un aplat jaune, puis semer des pois bleus par-dessus, et le
+jaune reparaît entre les pois. C'est ce qui fait des motifs une couche
+d'expression et non un second nuancier.
+
+**Chaque tuile porte un voile de fond à 30 %.** Sans lui, un trait fin passant
+entre deux pois ne laisserait aucune trace et l'enfant croirait l'outil cassé.
+Avec lui, le trait dépose toujours une teinte légère, et le motif s'y détache en
+pleine couleur.
+
+Techniquement, une tuile de 192 points est dessinée **en blanc, une seule fois**
+par motif, puis recolorée par filtre (`BlendMode.srcIn`) : une image sert les
+vingt-quatre couleurs de la palette et toutes celles que l'enfant invente. La
+tuile mesure 56 unités de page — assez grosse pour être reconnue, assez petite
+pour qu'un trait fin en attrape toujours un morceau. Chaque motif se raccorde à
+lui-même d'un bord à l'autre, sans quoi la répétition ferait apparaître une
+grille de coutures.
+
+La gomme ignore le motif : elle efface, elle ne peint pas.
+
+### 5.11 Autocollants — **livré**
+
+*Captures : `24-tiroir-autocollants.png`, `25-autocollants.png`*
+
+**Seize autocollants** — étoile, cœur, arc-en-ciel, soleil, lune, nuage, fleur,
+papillon, coccinelle, poisson, ballon, fusée, voiture, glace, petit gâteau,
+couronne.
+
+**Le geste.** On appuie sur le dessin : l'autocollant se colle là. Sans lever le
+doigt, on peut déjà le faire glisser. Deux doigts le **pincent** et le **font
+tourner**. Une croix rouge, au coin d'un cadre bleu, l'enlève.
+
+Un seul reconnaisseur gère les trois gestes — un déplacement à un doigt n'est
+qu'un pincement d'échelle 1 et de rotation nulle — si bien que poser, glisser,
+écarter les doigts et tourner s'enchaînent sans lever la main.
+
+**Trois décisions.**
+
+*Les autocollants sont **dessinés**, pas importés.* Ni fichier d'image dans le
+paquet, ni police d'émojis à télécharger au premier affichage : ce sont des
+chemins vectoriels. Ils sont donc nets sur une vignette de tiroir comme dans un
+export en 2048 points, identiques sur iOS, Android et le web, et disponibles
+hors ligne — ce qu'une police d'émojis système ne garantit ni en apparence ni en
+disponibilité.
+
+*Ils se collent **par-dessus tout le reste**, trait noir compris.* C'est ce que
+fait un autocollant sur du papier. Ils forment donc une quatrième couche, au
+dessus de l'encre (§ 6.4).
+
+*Transformer ne remplit pas l'historique.* Déplacer, pincer ou tourner modifie
+l'autocollant déjà posé plutôt que d'en empiler un nouveau : un seul pincement
+produirait sinon cent états et le bouton « annuler » deviendrait inutilisable.
+En contrepartie, ↩︎ retire l'autocollant entier plutôt que d'annuler la dernière
+rotation — c'est le compromis assumé.
+
+**Enlever est annulable.** Le retrait n'efface rien dans la liste : il y pose un
+marqueur, exactement comme « tout effacer » (§ 5.6). Un enfant qui supprime un
+autocollant par mégarde le récupère d'un ↩︎.
+
+Le cadre bleu et sa croix sont une aide à l'écran : ils n'apparaissent **jamais**
+dans l'image exportée, et disparaissent dès qu'on change d'outil. Ils gardent
+une taille constante quelle que soit celle de l'autocollant — sur un tout petit
+soleil, une croix minuscule serait impossible à viser avec un doigt d'enfant.
+
+Le pincement est borné entre **0,4× et 3×**. En dessous, l'autocollant devient
+impossible à rattraper du doigt ; au-dessus, il mange le dessin entier.
 
 ### 5.6 Annuler, refaire, effacer
 
@@ -451,9 +544,12 @@ Une œuvre **est la liste ordonnée de ses opérations** — jamais une image.
 
 ```dart
 sealed class PaintOp
-  ├── StrokeOp  outil, couleur, épaisseur, points, zone de confinement, graine
-  ├── FillOp    zone, couleur
-  └── ClearOp   marqueur « tout effacer »
+  ├── StrokeOp         outil, couleur, motif, épaisseur, points,
+  │                    zone de confinement, graine
+  ├── FillOp           zone, couleur, motif
+  ├── StickerOp        identifiant, dessin, centre, échelle, rotation
+  ├── RemoveStickerOp  marqueur « enlever cet autocollant »
+  └── ClearOp          marqueur « tout effacer »
 ```
 
 Ce choix donne gratuitement :
@@ -466,11 +562,24 @@ Ce choix donne gratuitement :
 * **un rejeu identique** — la graine du grain du crayon est stockée avec le
   trait, donc un dessin rouvert est au pixel près celui qui a été fermé.
 
+`StickerOp` est la **seule opération mutable** : le pincement modifie
+l'autocollant en place (§ 5.11). `RemoveStickerOp` désigne sa cible par
+identifiant, ce qui rend le retrait annulable sans jamais trouer la liste.
+
+**Compatibilité ascendante.** Le motif est une clé *facultative* du JSON : son
+absence signifie « aplat », et les coloriages enregistrés avant les motifs se
+relisent donc tels quels. Un indice de motif inconnu — venu d'une version plus
+récente — retombe lui aussi sur l'aplat plutôt que de faire échouer la lecture.
+Les valeurs de l'énumération des outils ne s'ajoutent qu'**à la fin**, puisque
+la sauvegarde stocke leur indice.
+
 ### 6.4 Rendu
 
-`ArtworkPainter` compose : papier → calque isolé (opérations validées + trait en
-cours) → encre. Le calque isolé est ce qui permet à la gomme d'utiliser
-`BlendMode.clear` sans jamais atteindre le papier ni le trait noir.
+`ArtworkPainter` compose quatre couches : papier → calque isolé (opérations
+validées + trait en cours) → encre → autocollants. Le calque isolé est ce qui
+permet à la gomme d'utiliser `BlendMode.clear` sans jamais atteindre le papier
+ni le trait noir ; les autocollants passent au-dessus de l'encre parce que c'est
+ce que fait un autocollant sur du papier (§ 5.11).
 
 **Points d'attention pour la suite**
 
@@ -681,6 +790,8 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 - [x] **Zones magiques** et **mode libre**, avec verrouillage au poser du doigt
 - [x] Fond de page traité comme une zone
 - [x] 24 couleurs + modale RVB + palette personnelle persistante
+- [x] **6 motifs** appliqués au crayon, au feutre et au pot, ancrés sur la page
+- [x] **16 autocollants vectoriels** : poser, glisser, pincer, tourner, enlever
 - [x] Annuler / refaire illimités, effacement annulable
 - [x] Sauvegarde automatique, reprise à l'identique
 - [x] **Mode capture** : export PNG 2048², téléchargement sur web, feuille de partage sur mobile
@@ -689,7 +800,7 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 - [x] Libellés d'accessibilité
 - [x] **Français et anglais**, interface et titres des dessins, réglable ou automatique
 - [x] **Contrôle parental** par appui maintenu, devant les réglages
-- [x] 56 tests automatisés (zones, détourage, historique, sérialisation, traductions, disposition, export, Atelier, planche de contrôle des dessins)
+- [x] 87 tests automatisés (zones, détourage, historique, sérialisation et compatibilité ascendante, motifs, autocollants, traductions, disposition, export, Atelier, planche de contrôle des dessins)
 
 ### À faire pour la v1 publiable
 
@@ -713,7 +824,7 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 cd app
 flutter pub get
 flutter run                     # appareil ou simulateur
-flutter test                    # 13 tests
+flutter test                    # 87 tests
 python3 ../tools/build_pages.py # régénérer la bibliothèque de dessins
 ```
 

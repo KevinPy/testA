@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'atelier/creation_store.dart';
 import 'l10n/app_strings.dart';
+import 'models/pattern.dart';
 import 'screens/gallery_screen.dart';
 import 'state/palette_store.dart';
 import 'state/settings_store.dart';
@@ -15,6 +16,9 @@ Future<void> main() async {
   // Toutes les orientations : l'application doit suivre la tablette, qu'elle
   // soit posée à plat ou tenue debout.
   await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
+  // Les tuiles des motifs sont fabriquées ici, une fois : le premier trait à
+  // pois ne doit pas payer la construction de son image au milieu du geste.
+  PatternTiles.instance.warmUp();
   final SharedPreferences prefs = await SharedPreferences.getInstance();
   runApp(
     BarbouilleApp(
