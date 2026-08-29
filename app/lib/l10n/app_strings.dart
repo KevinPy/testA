@@ -194,6 +194,12 @@ class AppStrings {
   String get delete => _t(fr: 'Supprimer', en: 'Delete');
   String get keep => _t(fr: 'Non, je le garde', en: 'No, keep it');
 
+  // ── Tiroir d'outils ───────────────────────────────────────────────────────
+  String get openTools => _t(fr: 'Mes outils', en: 'My tools');
+  String get sectionTools => _t(fr: 'Outils', en: 'Tools');
+  String get sectionSize => _t(fr: 'Taille du trait', en: 'Line size');
+  String get sectionColors => _t(fr: 'Couleurs', en: 'Colours');
+
   // ── Capture ───────────────────────────────────────────────────────────────
   String get capture => _t(fr: 'Garder mon dessin', en: 'Keep my drawing');
   String get captureTitle => _t(fr: 'Mon dessin', en: 'My drawing');

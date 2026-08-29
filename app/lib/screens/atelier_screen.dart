@@ -13,6 +13,8 @@ import '../models/coloring_page.dart';
 import '../models/tool.dart';
 import '../state/palette_store.dart';
 import '../theme/app_theme.dart';
+import '../widgets/sheet_layout.dart';
+import '../widgets/tool_controls.dart';
 import 'coloring_screen.dart';
 
 /// L'Atelier : l'enfant dessine un contour noir, l'application en fait un
@@ -40,6 +42,7 @@ class AtelierScreen extends StatefulWidget {
 }
 
 class _AtelierScreenState extends State<AtelierScreen> {
+  final GlobalKey<ScaffoldState> _scaffold = GlobalKey<ScaffoldState>();
   final SketchController _sketch = SketchController(size: const Size(1000, 1000));
   bool _working = false;
   int? _activePointer;
@@ -54,36 +57,39 @@ class _AtelierScreenState extends State<AtelierScreen> {
   Widget build(BuildContext context) {
     final AppStrings s = AppStrings.of(context);
     return Scaffold(
+      key: _scaffold,
       backgroundColor: AppColors.surface,
+      drawer: _SketchDrawer(controller: _sketch),
+      // Un trait commencé au bord gauche ne doit pas ouvrir le tiroir.
+      drawerEnableOpenDragGesture: false,
       body: SafeArea(
         child: Stack(
           children: <Widget>[
             LayoutBuilder(
               builder: (BuildContext context, BoxConstraints c) {
-                final bool compact = c.maxWidth < 620;
-                return Column(
+                final SheetLayout layout =
+                    SheetLayout.of(_sketch.size, c.biggest);
+                return Stack(
                   children: <Widget>[
-                    _TopBar(
-                      controller: _sketch,
-                      compact: compact,
-                      onClose: () => Navigator.of(context).pop(),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                    Positioned.fromRect(
+                      rect: layout.page,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: kSoftShadow,
+                        ),
+                        clipBehavior: Clip.antiAlias,
                         child: _Sheet(controller: _sketch, onPointer: _onPointer),
                       ),
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                      child: Center(child: _Tools(controller: _sketch)),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-                      child: _TransformButton(
-                        label: s.atelierTransform,
-                        onPressed: _working ? null : _transform,
-                      ),
+                    _AtelierControls(
+                      controller: _sketch,
+                      layout: layout,
+                      body: c.biggest,
+                      onClose: () => Navigator.of(context).pop(),
+                      onOpenTools: () => _scaffold.currentState?.openDrawer(),
+                      onTransform: _working ? null : _transform,
                     ),
                   ],
                 );
@@ -190,13 +196,7 @@ class _Sheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: kSoftShadow,
-      ),
-      clipBehavior: Clip.antiAlias,
+    return SizedBox.expand(
       child: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints c) {
           final Size box = c.biggest;
@@ -217,9 +217,37 @@ class _Sheet extends StatelessWidget {
                 onPointer(e, toPage(e.localPosition)),
             child: ListenableBuilder(
               listenable: controller,
-              builder: (BuildContext context, _) => CustomPaint(
-                size: box,
-                painter: SketchPainter(controller: controller),
+              builder: (BuildContext context, _) => Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: CustomPaint(
+                      size: box,
+                      painter: SketchPainter(controller: controller),
+                    ),
+                  ),
+                  // La consigne vivait dans l'ancien en-tête, supprimé avec les
+                  // barres. Sur une feuille vierge, elle est ce qui dit quoi
+                  // faire — elle s'efface au premier trait.
+                  if (controller.strokes.isEmpty && controller.live == null)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Text(
+                              AppStrings.of(context).atelierHint,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: Color(0xFFB9B4AE),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
           );
@@ -229,215 +257,241 @@ class _Sheet extends StatelessWidget {
   }
 }
 
-class _TopBar extends StatelessWidget {
-  const _TopBar({
+/// Commandes flottantes de l'Atelier, posées dans les bandes que laisse la
+/// feuille carrée — même principe que l'écran de coloriage.
+class _AtelierControls extends StatelessWidget {
+  const _AtelierControls({
     required this.controller,
-    required this.compact,
+    required this.layout,
+    required this.body,
     required this.onClose,
+    required this.onOpenTools,
+    required this.onTransform,
   });
 
   final SketchController controller;
-  final bool compact;
+  final SheetLayout layout;
+  final Size body;
   final VoidCallback onClose;
+  final VoidCallback onOpenTools;
+  final VoidCallback? onTransform;
 
   @override
   Widget build(BuildContext context) {
     final AppStrings s = AppStrings.of(context);
+
     return ListenableBuilder(
       listenable: controller,
-      builder: (BuildContext context, _) => Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-        child: Row(
-          children: <Widget>[
-            _Round(icon: Icons.home_rounded, label: s.gallery, onTap: onClose),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    s.atelierTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: compact ? 18 : 22,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.ink,
+      builder: (BuildContext context, _) {
+        final Widget home = RoundActionButton(
+          icon: Icons.home_rounded,
+          label: s.gallery,
+          onTap: onClose,
+        );
+        final Widget tools = ToolsMenuButton(
+          tool: controller.erasing ? ToolKind.gomme : ToolKind.feutre,
+          color: null,
+          onTap: onOpenTools,
+        );
+        final List<Widget> actions = <Widget>[
+          RoundActionButton(
+            icon: Icons.undo_rounded,
+            label: s.undo,
+            enabled: controller.canUndo,
+            onTap: controller.undo,
+          ),
+          RoundActionButton(
+            icon: Icons.redo_rounded,
+            label: s.redo,
+            enabled: controller.canRedo,
+            onTap: controller.redo,
+          ),
+          RoundActionButton(
+            icon: Icons.delete_outline_rounded,
+            label: s.eraseAll,
+            enabled: controller.canUndo,
+            onTap: controller.clear,
+          ),
+        ];
+        final Widget transform = _TransformButton(
+          label: s.atelierTransform,
+          onPressed: onTransform,
+          compact: layout.placement == ControlPlacement.sides,
+        );
+
+        return switch (layout.placement) {
+          ControlPlacement.sides => Stack(
+              children: <Widget>[
+                Positioned(
+                  left: 10,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        home,
+                        const SizedBox(height: 14),
+                        tools,
+                        const SizedBox(height: 14),
+                        transform,
+                      ],
                     ),
                   ),
-                  if (!compact)
-                    Text(
-                      s.atelierHint,
+                ),
+                Positioned(
+                  right: 10,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        for (final Widget w in actions) ...<Widget>[
+                          w,
+                          const SizedBox(height: 10),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ControlPlacement.stacked => Stack(
+              children: <Widget>[
+                Positioned(
+                  left: 10,
+                  right: 10,
+                  top: math.max(8, layout.page.top - 68),
+                  child: Row(
+                    children: <Widget>[
+                      home,
+                      const Spacer(),
+                      for (final Widget w in actions) ...<Widget>[
+                        w,
+                        const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+                Positioned(
+                  left: 14,
+                  top: math.min(body.height - 88, layout.page.bottom + 12),
+                  child: tools,
+                ),
+                Positioned(
+                  right: 14,
+                  top: math.min(body.height - 88, layout.page.bottom + 12),
+                  child: transform,
+                ),
+              ],
+            ),
+        };
+      },
+    );
+  }
+}
+
+/// Le tiroir de l'Atelier : feutre, gomme, trois épaisseurs. Pas de couleur —
+/// on y dessine le contour noir, la couleur vient après.
+class _SketchDrawer extends StatelessWidget {
+  const _SketchDrawer({required this.controller});
+
+  final SketchController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    final double width =
+        (MediaQuery.sizeOf(context).width * 0.86).clamp(280.0, 360.0);
+
+    return Drawer(
+      width: width,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(32),
+          bottomRight: Radius.circular(32),
+        ),
+      ),
+      child: SafeArea(
+        child: ListenableBuilder(
+          listenable: controller,
+          builder: (BuildContext context, _) => ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      s.openTools,
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF8A857F),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.ink,
                       ),
+                    ),
+                  ),
+                  IconButton(
+                    iconSize: 30,
+                    tooltip: s.close,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                s.atelierHint,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF8A857F),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: <Widget>[
+                  ToolIconButton(
+                    icon: Icons.brush_rounded,
+                    label: s.atelierPen,
+                    selected: !controller.erasing,
+                    onTap: () => controller.setErasing(false),
+                  ),
+                  ToolIconButton(
+                    icon: Icons.cleaning_services_rounded,
+                    label: s.tool(ToolKind.gomme),
+                    selected: controller.erasing,
+                    onTap: () => controller.setErasing(true),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 22),
+              Text(
+                s.sectionSize,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF8A857F),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: <Widget>[
+                  for (int i = 0; i < SketchController.widths.length; i++)
+                    BrushSizeButton(
+                      diameter: SketchController.widths[i] * 0.62,
+                      label: s.sectionSize,
+                      selected: controller.sizeIndex == i,
+                      enabled: true,
+                      tint: SketchPainter.ink,
+                      onTap: () => controller.setSizeIndex(i),
                     ),
                 ],
               ),
-            ),
-            _Round(
-              icon: Icons.undo_rounded,
-              label: s.undo,
-              enabled: controller.canUndo,
-              onTap: controller.undo,
-            ),
-            const SizedBox(width: 8),
-            _Round(
-              icon: Icons.redo_rounded,
-              label: s.redo,
-              enabled: controller.canRedo,
-              onTap: controller.redo,
-            ),
-            const SizedBox(width: 8),
-            _Round(
-              icon: Icons.delete_outline_rounded,
-              label: s.eraseAll,
-              enabled: controller.canUndo,
-              onTap: controller.clear,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Tools extends StatelessWidget {
-  const _Tools({required this.controller});
-
-  final SketchController controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final AppStrings s = AppStrings.of(context);
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (BuildContext context, _) => Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: kSoftShadow,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            _ToolButton(
-              icon: Icons.brush_rounded,
-              label: s.atelierPen,
-              selected: !controller.erasing,
-              onTap: () => controller.setErasing(false),
-            ),
-            _ToolButton(
-              icon: Icons.cleaning_services_rounded,
-              label: s.tool(ToolKind.gomme),
-              selected: controller.erasing,
-              onTap: () => controller.setErasing(true),
-            ),
-            Container(
-              width: 2,
-              height: 44,
-              margin: const EdgeInsets.symmetric(horizontal: 10),
-              color: AppColors.surface,
-            ),
-            for (int i = 0; i < SketchController.widths.length; i++)
-              _SizeButton(
-                diameter: SketchController.widths[i] * 0.62,
-                selected: controller.sizeIndex == i,
-                onTap: () => controller.setSizeIndex(i),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ToolButton extends StatelessWidget {
-  const _ToolButton({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: label,
-        child: Tooltip(
-          message: label,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(22),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: selected ? AppColors.primary : AppColors.surface,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Icon(icon,
-                  size: 34, color: selected ? Colors.white : AppColors.ink),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SizeButton extends StatelessWidget {
-  const _SizeButton({
-    required this.diameter,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final double diameter;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 3),
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: selected ? AppColors.surface : Colors.transparent,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: selected ? AppColors.primary : Colors.transparent,
-              width: 3,
-            ),
-          ),
-          child: Center(
-            child: Container(
-              width: diameter,
-              height: diameter,
-              decoration: const BoxDecoration(
-                color: SketchPainter.ink,
-                shape: BoxShape.circle,
-              ),
-            ),
+            ],
           ),
         ),
       ),
@@ -446,13 +500,48 @@ class _SizeButton extends StatelessWidget {
 }
 
 class _TransformButton extends StatelessWidget {
-  const _TransformButton({required this.label, required this.onPressed});
+  const _TransformButton({
+    required this.label,
+    required this.onPressed,
+    this.compact = false,
+  });
 
   final String label;
   final VoidCallback? onPressed;
 
+  /// En paysage, le bouton se réduit à son icône : la bande latérale est
+  /// étroite, et le libellé y tiendrait mal.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
+    if (compact) {
+      return Semantics(
+        button: true,
+        enabled: onPressed != null,
+        label: label,
+        child: Tooltip(
+          message: label,
+          child: Opacity(
+            opacity: onPressed == null ? 0.45 : 1,
+            child: GestureDetector(
+              onTap: onPressed,
+              child: Container(
+                width: 76,
+                height: 76,
+                decoration: BoxDecoration(
+                  color: AppColors.mint,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: kSoftShadow,
+                ),
+                child: const Icon(Icons.auto_awesome_rounded,
+                    size: 36, color: Colors.white),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return SizedBox(
       height: 68,
       child: FilledButton.icon(
@@ -504,48 +593,6 @@ class _WorkingOverlay extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Round extends StatelessWidget {
-  const _Round({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.enabled = true,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      enabled: enabled,
-      label: label,
-      child: Tooltip(
-        message: label,
-        child: Opacity(
-          opacity: enabled ? 1 : 0.32,
-          child: GestureDetector(
-            onTap: enabled ? onTap : null,
-            child: Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: kSoftShadow,
-              ),
-              child: Icon(icon, size: 28, color: AppColors.ink),
             ),
           ),
         ),

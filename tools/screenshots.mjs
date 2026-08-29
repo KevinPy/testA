@@ -12,14 +12,20 @@ import { join } from 'node:path';
 const OUT = outDir(new URL('../docs/screenshots', import.meta.url).pathname);
 const pages = Object.fromEntries(parsePages().map((p) => [p.id, p]));
 
-// ── Repères de mise en page, mesurés sur la disposition tablette 1194×834 ────
+// ── Repères mesurés sur la disposition « côtés » en 1194×834 ────────────────
+// La feuille carrée occupe toute la hauteur ; les commandes vivent dans les
+// bandes latérales, et les outils dans un tiroir.
 const T = {
-  page: { ox: 195, oy: 82, k: 0.736 },            // page 1000×1000 → écran
-  tool: { x: 64, crayon: 222, feutre: 303, pot: 383, gomme: 464 },
-  size: { x: 64, petit: 557, moyen: 621, grand: 685 },
-  top: { home: 44, magic: 872, undo: 1014, redo: 1082, clear: 1150, y: 40 },
-  addColor: { x: 1096, y: 118 },
-  swatch: (i) => ({ x: 1045 + (i % 3) * 50, y: 178 + Math.floor(i / 3) * 50 }),
+  page: { ox: 180, oy: 0, k: 0.834 },
+  home: { x: 38, y: 372 },
+  menu: { x: 48, y: 452 },
+  right: { x: 1156, magic: 280, undo: 346, redo: 412, clear: 478, capture: 544 },
+  drawer: {
+    tool: (i) => ({ x: 52 + i * 82, y: 128 }),
+    size: (i) => ({ x: 52 + i * 72, y: 246 }),
+    swatch: (i) => ({ x: 46 + (i % 5) * 67, y: 358 + Math.floor(i / 5) * 67 }),
+    addColor: { x: 46, y: 358 },
+  },
 };
 const P = (x, y) => ({ x: T.page.ox + x * T.page.k, y: T.page.oy + y * T.page.k });
 
@@ -33,6 +39,30 @@ const C = {
 
 const shot = (page, name) =>
   page.screenshot({ path: join(OUT, name) }).then(() => console.log('✓', name));
+
+const openDrawer = async (page) => {
+  await tap(page, T.menu.x, T.menu.y);
+  await page.waitForTimeout(600);
+};
+const closeDrawer = async (page) => {
+  await page.keyboard.press('Escape');
+  // Le voile du tiroir absorbe les appuis pendant son animation de fermeture :
+  // sans cette attente, le premier coup de pot de peinture se perd.
+  await page.waitForTimeout(800);
+};
+
+/// Choisit un outil, puis une couleur, en une seule ouverture du tiroir.
+async function choose(page, { tool, size, color }) {
+  await openDrawer(page);
+  if (tool !== undefined) await tap(page, T.drawer.tool(tool).x, T.drawer.tool(tool).y);
+  if (size !== undefined) await tap(page, T.drawer.size(size).x, T.drawer.size(size).y);
+  if (color !== undefined) {
+    // La première case du nuancier est le bouton « créer une couleur ».
+    const sw = T.drawer.swatch(color + 1);
+    await tap(page, sw.x, sw.y);
+  }
+  await closeDrawer(page);
+}
 
 // ═══════════════════════════ TABLETTE ═══════════════════════════════════════
 
@@ -52,65 +82,67 @@ await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
   await page.waitForTimeout(4500);
   await shot(page, '01-galerie-tablette.png');
 
-  await tap(page, 903, 128); // catégorie « Mes coloriages »
+  await tap(page, 903, 128);
   await page.waitForTimeout(700);
   await shot(page, '02-mes-coloriages.png');
 });
 
-// 2. Une séance de coloriage en cours, faite au pointeur comme au doigt.
+// 2. Une séance de coloriage, et le tiroir d'outils.
 await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
-  await tap(page, 207, 390); // « Le chat câlin »
-  await page.waitForTimeout(1200);
+  await tap(page, 157, 320);                      // « Le chat câlin »
+  await page.waitForTimeout(1300);
 
-  await tap(page, T.tool.x, T.tool.pot);
-  for (const [color, pts] of [
-    [C.ambre, [[330, 650], [500, 300], [800, 770], [370, 862], [630, 862]]],
-    [C.sable, [[450, 480], [500, 730]]],
-    [C.rose, [[310, 165], [690, 165], [500, 462]]],
-    [C.vert, [[415, 355], [585, 355]]],
-  ]) {
-    await tap(page, T.swatch(color).x, T.swatch(color).y);
-    for (const [x, y] of pts) {
-      const s = P(x, y);
-      await tap(page, s.x, s.y);
-    }
+  await choose(page, { tool: 2, color: C.ambre }); // pot de peinture
+  for (const [x, y] of [[330, 650], [500, 300], [800, 770], [370, 862], [630, 862]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
+  }
+  await choose(page, { color: C.sable });
+  for (const [x, y] of [[450, 480], [500, 730]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
+  }
+  await choose(page, { color: C.rose });
+  for (const [x, y] of [[310, 165], [690, 165], [500, 462]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
+  }
+  await choose(page, { color: C.vert });
+  for (const [x, y] of [[415, 355], [585, 355]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
   }
 
-  // Le crayon de cire par-dessus l'aplat : grain visible, couleur qui se dépose.
-  await tap(page, T.tool.x, T.tool.crayon);
-  await tap(page, T.swatch(C.corail).x, T.swatch(C.corail).y);
-  await tap(page, T.size.x, T.size.moyen);
+  // Le crayon de cire par-dessus l'aplat : grain visible.
+  await choose(page, { tool: 0, size: 1, color: C.corail });
   await stroke(page, [P(430, 700), P(470, 780), P(540, 700), P(575, 790)]);
   await stroke(page, [P(430, 760), P(500, 690), P(560, 780)]);
   await page.waitForTimeout(400);
   await shot(page, '03-coloriage-en-cours.png');
 
-  // 3. Démonstration des zones magiques : un gribouillage volontairement
-  //    débordant. Le trait ne quitte pas la zone touchée au premier contact.
-  await tap(page, T.tool.x, T.tool.feutre);
-  await tap(page, T.swatch(C.ciel).x, T.swatch(C.ciel).y);
-  await tap(page, T.size.x, T.size.grand);
+  await openDrawer(page);
+  await shot(page, '20-tiroir-outils.png');
+  await closeDrawer(page);
+
+  // 3. Zones magiques : un gribouillage volontairement débordant.
+  await choose(page, { tool: 1, size: 2, color: C.ciel });
   await stroke(page, [P(430, 560), P(900, 420), P(300, 640), P(880, 700), P(360, 500)]);
   await page.waitForTimeout(400);
   await shot(page, '04-zones-magiques.png');
 
-  await tap(page, T.top.undo, T.top.y);
+  await tap(page, T.right.x, T.right.undo);
   await page.waitForTimeout(400);
 
-  // 4. Le même geste en mode libre : la couleur va partout — mais toujours
-  //    SOUS le trait noir, qui reste net.
-  await tap(page, T.top.magic, T.top.y);
+  // 4. Le même geste en mode libre.
+  await tap(page, T.right.x, T.right.magic);
   await page.waitForTimeout(300);
   await stroke(page, [P(430, 560), P(900, 420), P(300, 640), P(880, 700), P(360, 500)]);
   await page.waitForTimeout(400);
   await shot(page, '05-mode-libre.png');
 
-  await tap(page, T.top.undo, T.top.y);
-  await tap(page, T.top.magic, T.top.y);
+  await tap(page, T.right.x, T.right.undo);
+  await tap(page, T.right.x, T.right.magic);
   await page.waitForTimeout(400);
 
-  // 5. La modale RVB.
-  await tap(page, T.addColor.x, T.addColor.y);
+  // 5. La modale RVB, depuis le tiroir.
+  await openDrawer(page);
+  await tap(page, T.drawer.addColor.x, T.drawer.addColor.y);
   await page.waitForTimeout(900);
   await shot(page, '06-modale-rvb.png');
 });
@@ -123,7 +155,7 @@ await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
   await page.waitForTimeout(4500);
   await tap(page, 218, 128);   // catégorie « Animaux »
   await page.waitForTimeout(700);
-  await tap(page, 157, 640);   // « Le hibou de nuit », 2e rangée
+  await tap(page, 157, 640);   // « Le hibou de nuit »
   await page.waitForTimeout(1400);
   await shot(page, '07-oeuvre-terminee.png');
 });
@@ -141,19 +173,25 @@ await withApp({ width: 390, height: 844, dsr: 3 }, async (page) => {
   await page.waitForTimeout(4500);
   await shot(page, '08-galerie-telephone.png');
 
-  await tap(page, 100, 300); // 1re carte
+  await tap(page, 100, 300);
   await page.waitForTimeout(1400);
   await shot(page, '09-coloriage-telephone.png');
 });
 
+// Paysage sur iPhone : le cas qui a motivé la refonte.
+await withApp({ width: 852, height: 393, dsr: 3 }, async (page) => {
+  await tap(page, 150, 250);
+  await page.waitForTimeout(1500);
+  await shot(page, '21-paysage-iphone.png');
+});
+
 // ═══════════════════════════ RÉGLAGES ══════════════════════════════════════
-// L'espace parents, derrière l'appui maintenu, et la même galerie en anglais.
 await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
-  await tap(page, 1148, 44);                      // bouton réglages
+  await tap(page, 1148, 44);
   await page.waitForTimeout(900);
   await shot(page, '12-controle-parental.png');
 
-  await page.mouse.move(652, 471);                // appui maintenu 2 s
+  await page.mouse.move(652, 471);
   await page.mouse.down();
   await page.waitForTimeout(2400);
   await page.mouse.up();
@@ -164,32 +202,38 @@ await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
 // Appareil réglé en anglais : l'application suit, titres des dessins compris.
 await withApp({ width: 1194, height: 834, dsr: 2, locale: 'en-US' }, async (page) => {
   await shot(page, '14-galerie-anglais.png');
-  await tap(page, 157, 320);                      // « The cuddly cat »
+  await tap(page, 157, 320);
   await page.waitForTimeout(1300);
-  await tap(page, T.addColor.x, T.addColor.y);    // modale RVB en anglais
+  await openDrawer(page);
+  await tap(page, T.drawer.addColor.x, T.drawer.addColor.y);
   await page.waitForTimeout(900);
   await shot(page, '15-modale-rvb-anglais.png');
 });
 
 // ═══════════════════════════ CAPTURE ═══════════════════════════════════════
-// Le dessin seul, tel qu'il sera enregistré — sans les barres d'outils.
 await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
-  await tap(page, 157, 320);                      // « Le chat câlin »
+  await tap(page, 157, 320);
   await page.waitForTimeout(1300);
-  await tap(page, T.tool.x, T.tool.pot);
-  for (const [color, pt] of [[3, P(330, 650)], [3, P(500, 300)], [15, P(310, 165)],
-                             [7, P(415, 355)], [7, P(585, 355)], [19, P(450, 480)]]) {
-    await tap(page, T.swatch(color).x, T.swatch(color).y);
-    await tap(page, pt.x, pt.y);
+  await choose(page, { tool: 2, color: C.ambre });
+  for (const [x, y] of [[330, 650], [500, 300]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
   }
-  await tap(page, 1150, T.top.y);                 // bouton capture
+  await choose(page, { color: C.rose });
+  await tap(page, P(310, 165).x, P(310, 165).y);
+  await choose(page, { color: C.vert });
+  for (const [x, y] of [[415, 355], [585, 355]]) {
+    await tap(page, P(x, y).x, P(x, y).y);
+  }
+  await choose(page, { color: C.sable });
+  await tap(page, P(450, 480).x, P(450, 480).y);
+
+  await tap(page, T.right.x, T.right.capture);
   await page.waitForTimeout(2500);
   await shot(page, '19-capture.png');
 });
 
 // ═══════════════════════════ ATELIER ═══════════════════════════════════════
-// Un dessin fait à la main, puis le coloriage qui en est déduit.
-const AT = (x, y) => ({ x: 313 + x * 0.568, y: 76 + y * 0.568 });
+const AT = (x, y) => P(x, y);
 function ring(cx, cy, r, n = 44) {
   const pts = [];
   for (let i = 0; i <= n; i++) {
@@ -201,7 +245,7 @@ function ring(cx, cy, r, n = 44) {
 
 await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
   await tap(page, 1047, 51);                       // Atelier
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1300);
   await stroke(page, ring(500, 300, 190), { steps: 2 });
   await stroke(page, ring(500, 700, 250), { steps: 2 });
   await stroke(page, [AT(430, 260), AT(440, 300)], { steps: 6 });
@@ -209,18 +253,19 @@ await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
   await stroke(page, [AT(430, 360), AT(500, 400), AT(570, 360)], { steps: 8 });
   await shot(page, '16-atelier-dessin.png');
 
-  await tap(page, 596, 788);                       // « En faire un coloriage »
+  await tap(page, T.menu.x, T.menu.y + 90);        // « En faire un coloriage »
   await page.waitForTimeout(3500);
 
-  await tap(page, T.tool.x, T.tool.pot);
-  for (const [color, pt] of [[3, P(500, 300)], [10, P(500, 700)], [6, P(90, 930)]]) {
-    await tap(page, T.swatch(color).x, T.swatch(color).y);
-    await tap(page, pt.x, pt.y);
-  }
+  await choose(page, { tool: 2, color: C.ambre });
+  await tap(page, P(500, 300).x, P(500, 300).y);
+  await choose(page, { color: C.ciel });
+  await tap(page, P(500, 700).x, P(500, 700).y);
+  await choose(page, { color: C.anis });
+  await tap(page, P(90, 930).x, P(90, 930).y);
   await page.waitForTimeout(400);
   await shot(page, '17-atelier-coloriage.png');
 
-  await tap(page, T.top.home, T.top.y);            // retour galerie
+  await tap(page, T.home.x, T.home.y);
   await page.waitForTimeout(1000);
   await shot(page, '18-mes-dessins.png');
 });

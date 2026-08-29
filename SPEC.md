@@ -156,18 +156,38 @@ Objectif au lancement public : **60 dessins**, soit 5 lots thématiques
 
 *Captures : `03-coloriage-en-cours.png` (tablette), `09-coloriage-telephone.png`*
 
-**Tablette et paysage (largeur ≥ 900 dp)** — barre d'outils en rail à gauche,
-nuancier en rail à droite, feuille au centre, occupant toute la hauteur.
+**La feuille occupe tout ce que l'écran peut lui donner.** Il n'y a plus de
+rails permanents : outils, taille et couleurs vivent dans un **tiroir**, ouvert
+par un seul bouton qui porte l'outil et la couleur du moment — l'enfant sait
+avec quoi il dessine sans rien ouvrir.
 
-**Téléphone en portrait (< 900 dp)** — barre supérieure compacte, feuille, puis
-outils et couleurs en bas. Le sélecteur de taille **flotte sur le bord gauche de
-la feuille** : sur un écran de téléphone, chaque rangée d'outils prise à la zone
-de dessin se paie trop cher.
+Les commandes restantes flottent **dans les bandes que laisse une feuille carrée
+sur un écran qui ne l'est pas**. Elles ne coûtent donc pas un point de surface de
+dessin. Une seule règle décide de leur place :
 
-Barre supérieure : `🏠 Galerie` · titre · **bascule Zones magiques** · `↩︎` ·
-`↪︎` · `🗑️`. Sur téléphone le titre disparaît et la bascule passe en icône seule.
+| Marge latérale disponible | Disposition |
+|---|---|
+| ≥ 92 dp (paysage, tablette) | Deux colonnes dans les bandes gauche et droite |
+| < 92 dp (portrait) | Rangée au-dessus de la feuille, bouton d'outils en dessous |
 
-### 5.3 Les quatre outils
+En portrait, les commandes se collent à la feuille plutôt qu'aux bords de
+l'écran : des boutons plaqués aux extrémités donneraient une page qui flotte.
+
+**Ce que cela a corrigé.** Sur un iPhone en paysage (852 × 393), les anciennes
+barres laissaient au dessin **environ 12 % de l'écran** — il tenait dans un
+timbre. La feuille en occupe désormais la plus grande part qu'un carré puisse
+prendre dans ce cadre, soit 46 %.
+
+### 5.3 Le tiroir et les quatre outils
+
+Un bouton **« Mes outils »** ouvre un tiroir qui regroupe tout ce qui se choisit :
+les quatre outils, les trois épaisseurs, le nuancier et la création de couleur.
+Le tiroir défile — en paysage sur téléphone, la hauteur utile descend sous
+400 points et le nuancier n'y tiendrait pas d'un bloc.
+
+**L'ouverture par glissement depuis le bord est désactivée** : un trait commencé
+au bord gauche de la feuille doit colorier, pas ouvrir le tiroir.
+
 
 | Outil | Rendu | Rôle |
 |---|---|---|
@@ -466,16 +486,16 @@ cours) → encre. Le calque isolé est ce qui permet à la gomme d'utiliser
 
 ## 7. Adaptation aux écrans
 
-Une seule bascule, à **900 dp** de largeur, et un calcul de colonnes de galerie.
-Pas de listes d'appareils, pas de cas particuliers.
+Deux calculs, pas de liste d'appareils : la place de la feuille (le plus grand
+carré centré qui tient dans le cadre) et, selon la marge qu'elle laisse, celle
+des commandes. La galerie garde sa règle de colonnes.
 
-| | Téléphone portrait | Téléphone paysage / petite tablette | Tablette |
+| | Téléphone portrait | Téléphone paysage | Tablette |
 |---|---|---|---|
 | Galerie | 2 colonnes | 3–4 | 4–6 |
-| Outils | Rangée basse | Rail latéral | Rail latéral |
-| Couleurs | Bande défilante | Rail droit | Rail droit |
-| Tailles | Flottant sur la feuille | Dans le rail | Dans le rail |
-| Titre du dessin | Masqué | Affiché | Affiché |
+| Feuille | Ajustée à la largeur | **Toute la hauteur** | Toute la hauteur |
+| Outils, taille, couleurs | Tiroir | Tiroir | Tiroir |
+| Commandes | Au-dessus et sous la feuille | Colonnes latérales | Colonnes latérales |
 
 **Toutes les orientations sont autorisées** : portrait, paysage gauche et droit
 partout, plus le portrait inversé sur tablette — une tablette posée sur une table
@@ -664,7 +684,8 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 - [x] Annuler / refaire illimités, effacement annulable
 - [x] Sauvegarde automatique, reprise à l'identique
 - [x] **Mode capture** : export PNG 2048², téléchargement sur web, feuille de partage sur mobile
-- [x] Dispositions téléphone et tablette, toutes orientations
+- [x] **Tiroir d'outils** ; la feuille occupe tout l'écran disponible
+- [x] Dispositions téléphone et tablette, toutes orientations, paysage compris
 - [x] Libellés d'accessibilité
 - [x] **Français et anglais**, interface et titres des dessins, réglable ou automatique
 - [x] **Contrôle parental** par appui maintenu, devant les réglages

@@ -31,12 +31,21 @@ d'un bouton.
   coloriables et le range dans « Mes dessins »
 - **Français et anglais** — interface et titres des dessins, automatique par défaut
 - **Garder son dessin** : export PNG 2048², sans les barres d'outils
+- **Tiroir d'outils** : outils, taille et couleurs derrière un seul bouton, pour
+  que la feuille occupe tout l'écran — y compris en paysage sur téléphone
 - Annuler / refaire illimités ; « tout effacer » annulable d'un seul appui
 - Sauvegarde automatique après chaque trait, reprise à l'identique
 - Disposition adaptée au téléphone et à la tablette, dans toutes les orientations
 - **Aucun compte, aucune publicité, aucune collecte, fonctionne hors ligne**
 
 ![Coloriage en cours](docs/screenshots/03-coloriage-en-cours.png)
+
+Outils, taille et couleurs vivent dans un tiroir : la feuille prend tout le
+reste. Les commandes flottent dans les bandes que laisse une feuille carrée sur
+un écran qui ne l'est pas — elles ne coûtent donc aucune surface de dessin.
+
+![Le tiroir d'outils](docs/screenshots/20-tiroir-outils.png)
+![Paysage sur iPhone](docs/screenshots/21-paysage-iphone.png)
 
 ## Langue
 
@@ -56,7 +65,7 @@ puis les traductions — que l'analyseur signale une par une.
 cd app
 flutter pub get
 flutter run            # appareil ou simulateur
-flutter test           # 46 tests
+flutter test           # 52 tests
 ```
 
 ## Essayer tout de suite
