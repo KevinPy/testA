@@ -689,7 +689,7 @@ pilotée automatiquement (`tools/screenshots.mjs`).
 - [x] Libellés d'accessibilité
 - [x] **Français et anglais**, interface et titres des dessins, réglable ou automatique
 - [x] **Contrôle parental** par appui maintenu, devant les réglages
-- [x] 22 tests automatisés (zones, détourage, historique, sérialisation, traductions, planche de contrôle des dessins)
+- [x] 56 tests automatisés (zones, détourage, historique, sérialisation, traductions, disposition, export, Atelier, planche de contrôle des dessins)
 
 ### À faire pour la v1 publiable
 

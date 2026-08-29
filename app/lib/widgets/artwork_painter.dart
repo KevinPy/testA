@@ -69,14 +69,14 @@ class ArtworkPainter extends CustomPainter {
       for (int i = 0; i < page.regions.length; i++) {
         final int? hint = page.source.regions[i].hint;
         if (hint != null) {
-          canvas.drawPath(page.zones[i], Paint()..color = Color(hint));
+          _confined(canvas, i, () {
+            canvas.drawPath(page.regions[i], Paint()..color = Color(hint));
+          });
         }
       }
     }
-    for (final PaintOp op in ops) {
-      _drawOp(canvas, op, bounds);
-    }
-    if (live != null) _drawOp(canvas, live!, bounds);
+    _drawSequence(canvas, ops, bounds);
+    if (live != null) _drawSequence(canvas, <PaintOp>[live!], bounds);
     canvas.restore();
 
     // ── Couche encre ──────────────────────────────────────────────────────
@@ -85,25 +85,96 @@ class ArtworkPainter extends CustomPainter {
     canvas.restore();
   }
 
-  void _drawOp(Canvas canvas, PaintOp op, Rect bounds) {
+  /// Zone à laquelle une opération est confinée, ou `null` si elle va partout.
+  static int? _regionOf(PaintOp op) => switch (op) {
+        FillOp(:final int region) => region,
+        StrokeOp(:final int? clipRegion) => clipRegion,
+        ClearOp() => null,
+      };
+
+  /// Exécute [draw] en ne laissant subsister que la surface visible de [region].
+  ///
+  /// La zone est d'abord détourée sur son contour brut, puis les zones posées
+  /// par-dessus sont RETIRÉES AU PINCEAU dans le calque. Aucune géométrie
+  /// booléenne n'intervient : c'est le rasteriseur qui tranche, et il donne le
+  /// même résultat sur toutes les plateformes — ce que `Path.combine` ne
+  /// garantissait pas.
+  void _confined(Canvas canvas, int region, void Function() draw) {
+    final Rect scope = region == kBackgroundRegion
+        ? (Offset.zero & page.source.size)
+        : page.regionBounds[region];
+
+    canvas.saveLayer(scope, Paint());
+    canvas.save();
+    if (region != kBackgroundRegion) {
+      canvas.clipPath(page.regions[region], doAntiAlias: true);
+    }
+    draw();
+    canvas.restore(); // on lève le détourage, on garde le calque
+
+    final Paint erase = Paint()
+      ..blendMode = BlendMode.clear
+      ..isAntiAlias = true;
+    for (final int j in page.above(region)) {
+      canvas.drawPath(page.regions[j], erase);
+    }
+    canvas.restore();
+  }
+
+  /// Dessine la suite d'opérations en regroupant celles qui se suivent dans une
+  /// même zone : un calque par groupe, et non par opération.
+  ///
+  /// Deux opérations de zones différentes ne se recouvrent jamais une fois les
+  /// zones supérieures découpées : leur ordre relatif est donc sans effet, et
+  /// le regroupement ne change rien à ce que voit l'enfant.
+  void _drawSequence(Canvas canvas, List<PaintOp> list, Rect bounds) {
+    int i = 0;
+    while (i < list.length) {
+      final PaintOp op = list[i];
+      if (op is ClearOp) {
+        canvas.drawRect(bounds, Paint()..blendMode = BlendMode.clear);
+        i++;
+        continue;
+      }
+      final int? region = _regionOf(op);
+      int j = i + 1;
+      while (j < list.length &&
+          list[j] is! ClearOp &&
+          _regionOf(list[j]) == region) {
+        j++;
+      }
+      if (region == null) {
+        for (int k = i; k < j; k++) {
+          _drawOne(canvas, list[k]);
+        }
+      } else {
+        final int from = i, to = j;
+        _confined(canvas, region, () {
+          for (int k = from; k < to; k++) {
+            _drawOne(canvas, list[k]);
+          }
+        });
+      }
+      i = j;
+    }
+  }
+
+  void _drawOne(Canvas canvas, PaintOp op) {
     switch (op) {
       case ClearOp():
-        // Efface la couche couleur, pas le papier ni l'encre : le calque isolé
-        // ouvert dans `paint` garantit que le trait noir survit.
-        canvas.drawRect(bounds, Paint()..blendMode = BlendMode.clear);
+        break; // traité par _drawSequence
       case FillOp():
+        // Le contour brut suffit : _confined a déjà posé le détourage et
+        // retirera les zones supérieures.
         canvas.drawPath(
-          page.pathForRegion(op.region),
+          op.region == kBackgroundRegion
+              ? (Path()..addRect(Offset.zero & page.source.size))
+              : page.regions[op.region],
           Paint()
             ..color = Color(op.color)
             ..isAntiAlias = true,
         );
       case StrokeOp():
-        final int? clip = op.clipRegion;
-        if (clip != null) {
-          canvas.save();
-          canvas.clipPath(page.pathForRegion(clip), doAntiAlias: true);
-        }
         switch (op.tool) {
           case ToolKind.feutre:
             _drawMarker(canvas, op);
@@ -114,7 +185,6 @@ class ArtworkPainter extends CustomPainter {
           case ToolKind.pot:
             break; // le pot n'émet jamais de StrokeOp
         }
-        if (clip != null) canvas.restore();
     }
   }
 
@@ -196,16 +266,24 @@ class ArtworkPainter extends CustomPainter {
 
     if (page.source.drawRegionOutlines) {
       for (int i = 0; i < page.regions.length; i++) {
-        canvas.save();
-        canvas.clipPath(page.inkClips[i], doAntiAlias: true);
+        // Le trait d'une oreille doit s'arrêter net au bord de la tête, comme
+        // dans un vrai album. On le pose dans un calque, puis on retire les
+        // zones supérieures — même mécanique que pour la couleur.
+        canvas.saveLayer(page.regionBounds[i].inflate(ink.strokeWidth), Paint());
         canvas.drawPath(page.regions[i], ink);
+        final Paint erase = Paint()
+          ..blendMode = BlendMode.clear
+          ..isAntiAlias = true;
+        for (final int j in page.above(i)) {
+          canvas.drawPath(page.regions[j], erase);
+        }
         canvas.restore();
       }
     }
     for (final (Path p, double w, int? clip) in page.details) {
       if (clip != null) {
         canvas.save();
-        canvas.clipPath(page.pathForRegion(clip), doAntiAlias: true);
+        canvas.clipPath(page.regions[clip], doAntiAlias: true);
       }
       if (w == 0) {
         canvas.drawPath(p, Paint()..color = const Color(0xFF1B1917)..isAntiAlias = true);

@@ -73,36 +73,31 @@ class ColoringPage {
 /// Version « compilée » d'une page : chemins analysés une seule fois, puis mis
 /// en cache pour toute la durée de vie de l'application.
 class CompiledPage {
-  CompiledPage._(
-    this.source,
-    this.regions,
-    this.zones,
-    this.inkClips,
-    this.details,
-    this.background,
-  );
+  CompiledPage._(this.source, this.regions, this.regionBounds, this.details);
 
   final ColoringPage source;
 
   /// Contours bruts, tels qu'ils sont dessinés à l'encre.
+  ///
+  /// Il n'existe volontairement AUCUNE géométrie booléenne ici. La surface
+  /// réellement coloriable d'une zone — son contour moins les zones posées
+  /// par-dessus — n'est plus un chemin calculé, mais un résultat de rendu :
+  /// [ArtworkPainter] peint la zone puis découpe les zones supérieures au
+  /// pinceau.
+  ///
+  /// Ce choix vient d'un défaut visible : `Path.combine` ne donne pas le même
+  /// résultat sur le moteur web que sur la machine virtuelle Dart. Sur le
+  /// poisson, deux écailles et une nageoire se retrouvaient dans la zone du
+  /// corps, que le pot de peinture coloriait avec lui — alors que les tests
+  /// étaient au vert. Le test de contact, lui, n'a jamais utilisé de booléens :
+  /// rendu et test de contact reposent désormais sur la même vérité.
   final List<Path> regions;
 
-  /// Surface RÉELLEMENT coloriable de chaque zone : son contour moins les zones
-  /// posées par-dessus. Sans cette soustraction, peindre le corps du chat
-  /// ferait apparaître de la couleur derrière sa tête restée blanche.
-  final List<Path> zones;
-
-  /// Masque d'encre de chaque zone : la page moins les zones posées par-dessus.
-  /// Le trait d'une oreille s'arrête donc net au bord de la tête, comme dans un
-  /// vrai album de coloriage, au lieu de la traverser.
-  final List<Path> inkClips;
+  /// Cadre de chaque contour, pour n'examiner que les zones qui se recoupent.
+  final List<Rect> regionBounds;
 
   /// `(chemin, épaisseur, zone de confinement)` — épaisseur 0 = chemin plein.
   final List<(Path, double, int?)> details;
-
-  /// Le fond : la page entière moins toutes les zones. Colorier « à côté » du
-  /// personnage sans déborder dessus reste ainsi possible.
-  final Path background;
 
   static final Map<String, CompiledPage> _cache = <String, CompiledPage>{};
 
@@ -118,31 +113,12 @@ class CompiledPage {
           .map((DetailData d) => (parseSvgPathData(d.d), d.width, d.clip))
           .toList();
 
-      final Path full = Path()
-        ..addRect(Rect.fromLTWH(0, 0, page.size.width, page.size.height));
-
-      // Unions suffixes : `above[i]` = tout ce qui est peint APRÈS la zone i.
-      // Calculé de la fin vers le début, soit une seule opération booléenne par
-      // zone au lieu d'une par paire.
-      final int n = regions.length;
-      final List<Path> above = List<Path>.filled(n + 1, Path(), growable: false);
-      above[n] = Path();
-      for (int i = n - 1; i >= 0; i--) {
-        above[i] = Path.combine(PathOperation.union, above[i + 1], regions[i]);
-      }
-
-      final List<Path> zones = <Path>[];
-      final List<Path> inkClips = <Path>[];
-      for (int i = 0; i < n; i++) {
-        zones.add(Path.combine(PathOperation.difference, regions[i], above[i + 1]));
-        inkClips.add(Path.combine(PathOperation.difference, full, above[i + 1]));
-      }
-
-      final Path background =
-          Path.combine(PathOperation.difference, full, above[0]);
-
       return CompiledPage._(
-          page, regions, zones, inkClips, details, background);
+        page,
+        regions,
+        <Rect>[for (final Path p in regions) p.getBounds()],
+        details,
+      );
     });
   }
 
@@ -158,9 +134,25 @@ class CompiledPage {
     return kBackgroundRegion;
   }
 
-  /// Surface à peindre / à détourer pour la zone [index].
-  Path pathForRegion(int index) =>
-      index == kBackgroundRegion ? background : zones[index];
+  /// Les zones posées APRÈS [index] qui recoupent son cadre — celles qu'il
+  /// faut découper pour ne garder que sa surface visible. Pour le fond, ce
+  /// sont toutes les zones.
+  Iterable<int> above(int index) sync* {
+    final int start = index == kBackgroundRegion ? 0 : index + 1;
+    for (int j = start; j < regions.length; j++) {
+      if (index != kBackgroundRegion &&
+          !regionBounds[index].overlaps(regionBounds[j])) {
+        continue;
+      }
+      yield j;
+    }
+  }
+
+  /// Le point [p] appartient-il à la surface visible de la zone [region] ?
+  ///
+  /// Défini à partir de [hitTest], donc rigoureusement identique à ce que le
+  /// doigt de l'enfant désigne — et à ce que le peintre colorie.
+  bool zoneContains(int region, Offset p) => hitTest(p) == region;
 }
 
 /// Index conventionnel du fond de page.

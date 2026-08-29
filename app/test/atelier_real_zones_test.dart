@@ -32,12 +32,11 @@ void main() {
     final CompiledPage c = CompiledPage.of(build());
     addTearDown(() => CompiledPage.evict('atelier_reel'));
 
-    final Path background = c.pathForRegion(0);
-    expect(background.contains(const Offset(30, 30)), isTrue,
+    expect(c.zoneContains(0, const Offset(30, 30)), isTrue,
         reason: 'le coin appartient au fond');
-    expect(background.contains(const Offset(500, 300)), isFalse,
+    expect(c.zoneContains(0, const Offset(500, 300)), isFalse,
         reason: 'peindre le fond ne doit pas repeindre la tête');
-    expect(background.contains(const Offset(500, 700)), isFalse,
+    expect(c.zoneContains(0, const Offset(500, 700)), isFalse,
         reason: 'peindre le fond ne doit pas repeindre le corps');
   });
 
@@ -48,7 +47,7 @@ void main() {
     for (final Offset p in <Offset>[const Offset(500, 300), const Offset(500, 700)]) {
       final int hit = c.hitTest(p);
       expect(hit, isNot(kBackgroundRegion));
-      expect(c.pathForRegion(hit).contains(p), isTrue);
+      expect(c.zoneContains(hit, p), isTrue);
     }
   });
 }

@@ -20,6 +20,9 @@ const T = {
   home: { x: 38, y: 372 },
   menu: { x: 48, y: 452 },
   right: { x: 1156, magic: 280, undo: 346, redo: 412, clear: 478, capture: 544 },
+  // L'Atelier empile trois boutons à gauche (accueil, outils, transformer),
+  // le coloriage seulement deux : les repères diffèrent.
+  atelier: { home: { x: 38, y: 327 }, tools: { x: 48, y: 407 }, transform: { x: 48, y: 497 } },
   drawer: {
     tool: (i) => ({ x: 52 + i * 82, y: 128 }),
     size: (i) => ({ x: 52 + i * 72, y: 246 }),
@@ -253,7 +256,7 @@ await withApp({ width: 1194, height: 834, dsr: 2 }, async (page) => {
   await stroke(page, [AT(430, 360), AT(500, 400), AT(570, 360)], { steps: 8 });
   await shot(page, '16-atelier-dessin.png');
 
-  await tap(page, T.menu.x, T.menu.y + 90);        // « En faire un coloriage »
+  await tap(page, T.atelier.transform.x, T.atelier.transform.y);
   await page.waitForTimeout(3500);
 
   await choose(page, { tool: 2, color: C.ambre });

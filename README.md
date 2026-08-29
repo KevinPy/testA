@@ -65,7 +65,7 @@ puis les traductions — que l'analyseur signale une par une.
 cd app
 flutter pub get
 flutter run            # appareil ou simulateur
-flutter test           # 52 tests
+flutter test           # 56 tests
 ```
 
 ## Essayer tout de suite

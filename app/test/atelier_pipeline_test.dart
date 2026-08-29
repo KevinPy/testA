@@ -81,12 +81,12 @@ void main() {
     addTearDown(() => CompiledPage.evict('atelier_test'));
 
     const Offset head = Offset(500, 300);
-    final Path painted = c.pathForRegion(c.hitTest(head));
-    expect(painted.contains(head), isTrue,
+    final int zone = c.hitTest(head);
+    expect(c.zoneContains(zone, head), isTrue,
         reason: 'le pot doit peindre là où le doigt s\'est posé');
 
     // Et cette surface ne doit pas déborder sur le corps.
-    expect(painted.contains(const Offset(500, 700)), isFalse);
+    expect(c.zoneContains(zone, const Offset(500, 700)), isFalse);
   });
 
   test('la zone du fond exclut les formes posées dessus', () {
@@ -101,9 +101,8 @@ void main() {
     addTearDown(() => CompiledPage.evict('atelier_test'));
 
     // Le fond est la plus grande zone : l'index 0 après le tri décroissant.
-    final Path background = c.pathForRegion(0);
-    expect(background.contains(const Offset(30, 30)), isTrue);
-    expect(background.contains(const Offset(500, 300)), isFalse,
+    expect(c.zoneContains(0, const Offset(30, 30)), isTrue);
+    expect(c.zoneContains(0, const Offset(500, 300)), isFalse,
         reason: 'sinon peindre le fond repeindrait tout le dessin');
   });
 }
